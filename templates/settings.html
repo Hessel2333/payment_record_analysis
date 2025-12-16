@@ -1,0 +1,435 @@
+{% extends "base.html" %}
+
+{% block title %}设置{% endblock %}
+
+{% block head %}
+
+{% endblock %}
+
+{% block content %}
+{% if show_upload_notice %}
+<div class="alert-message">
+    <div class="alert-icon">
+        <i class="fas fa-exclamation-circle"></i>
+    </div>
+    <div class="alert-content">
+        <div class="alert-title">需要上传数据</div>
+        <div class="alert-description">
+            请先上传支付宝账单文件，系统将为您生成详细的消费分析报告。
+            <br>
+            上传后的数据将在本地进行分析，30分钟后自动清除，请放心使用。
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h1 class="page-title">文件管理</h1>
+    <div class="session-timer">
+        <i class="fas fa-clock"></i>
+        <span>会话剩余时间: <span id="timeRemaining">--:--</span></span>
+    </div>
+</div>
+
+<div class="split-layout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px;">
+    <!-- 左侧：支付宝专区 -->
+    <div class="provider-column alipay-column">
+        <h2 class="column-header"
+            style="color: #1677FF; border-bottom: 2px solid #1677FF; padding-bottom: 10px; margin-bottom: 20px;">
+            <i class="fab fa-alipay"></i> 支付宝账单
+        </h2>
+
+        <!-- 支付宝指南 -->
+        <div class="upload-guide">
+            <h3>如何获取支付宝账单？</h3>
+            <ol>
+                <li>打开支付宝 App -> 我的 -> 账单</li>
+                <li>右上角 ... -> 开具交易流水证明 -> 用于个人对账 -> 申请</li>
+                <li>自定义时间范围（最长为一年） -> 填写邮箱 -> 下载账单</li>
+                <li>申请记录中找到解压密码 -> 解压下载的文件，获取 CSV 文件</li>
+                <li>按年份重命名为【alipay_record_2024.csv】格式</li>
+            </ol>
+        </div>
+
+        <!-- 支付宝上传 -->
+        <label class="file-upload" id="alipayUploadArea" style="height: 180px;">
+            <input type="file" id="alipayInput" accept=".csv" multiple>
+            <div class="upload-icon">
+                <i class="fas fa-file-csv"></i>
+            </div>
+            <div class="upload-text">
+                点击或拖拽<br>支付宝 CSV 文件
+                <br><span style="font-size: 12px; opacity: 0.7;">最大 16MB</span>
+            </div>
+        </label>
+
+        <!-- 支付宝文件列表 -->
+        <div class="file-list-container">
+            <h4>已上传文件</h4>
+            <div class="file-list" id="alipayFileList"></div>
+        </div>
+    </div>
+
+    <!-- 右侧：微信专区 -->
+    <div class="provider-column wechat-column">
+        <h2 class="column-header"
+            style="color: #07C160; border-bottom: 2px solid #07C160; padding-bottom: 10px; margin-bottom: 20px;">
+            <i class="fab fa-weixin"></i> 微信账单
+        </h2>
+
+        <!-- 微信指南 -->
+        <div class="upload-guide">
+            <h3>如何获取微信账单？</h3>
+            <ol>
+                <li>打开微信 App -> 我 -> 服务 -> 钱包 -> 账单</li>
+                <li>点击右上角 [常见问题] -> 下载账单 -> 用于个人对账</li>
+                <li>选择账单时间（最长三个月，可多次申请） -> 下一步</li>
+                <li>填写邮箱 -> 确认申请 -> 输入支付密码</li>
+                <li>解压下载的压缩包，获取 <span class="highlight">.xlsx</span> 格式文件</li>
+            </ol>
+        </div>
+
+        <!-- 微信上传 -->
+        <label class="file-upload" id="wechatUploadArea" style="height: 180px;">
+            <input type="file" id="wechatInput" accept=".xlsx" multiple>
+            <div class="upload-icon">
+                <i class="fas fa-file-excel"></i>
+            </div>
+            <div class="upload-text">
+                点击或拖拽<br>微信 XLSX 文件
+                <br><span style="font-size: 12px; opacity: 0.7;">最大 16MB</span>
+            </div>
+        </label>
+
+        <!-- 微信文件列表 -->
+        <div class="file-list-container">
+            <h4>已上传文件</h4>
+            <div class="file-list" id="wechatFileList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 在 upload-section 后面添加删除区域 -->
+<div class="delete-section">
+    <h2 class="section-title">数据管理</h2>
+    <div class="delete-area">
+        <button id="deleteAllBtn" class="delete-all-btn">
+            <i class="fas fa-trash-alt"></i>
+            删除所有账单数据
+        </button>
+        <p class="delete-warning">删除后将清空所有已上传的账单文件和分析数据，此操作不可恢复。</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const alipayUploadArea = document.getElementById('alipayUploadArea');
+        const wechatUploadArea = document.getElementById('wechatUploadArea');
+        const alipayInput = document.getElementById('alipayInput');
+        const wechatInput = document.getElementById('wechatInput');
+
+        const alipayFileList = document.getElementById('alipayFileList');
+        const wechatFileList = document.getElementById('wechatFileList');
+        const maxFileSize = 16 * 1024 * 1024; // 16MB
+
+        // 初始化过滤器状态（仅为了 UI 统一，不执行实际过滤逻辑）
+        if (window.TransactionFilterManager) {
+            TransactionFilterManager.init(() => {
+                // Settings 页面不需要重新加载数据，所以回调留空
+                console.log('Filter changed in settings (UI only)');
+            });
+        }
+
+
+        // 添加文件大小检查
+        function checkFileSize(file, errorArea) {
+            if (file.size > maxFileSize) {
+                showError(`文件 ${file.name} 超过大小限制（16MB）`, errorArea);
+                return false;
+            }
+            return true;
+        }
+
+        // 处理文件上传
+        async function uploadFile(file, errorArea) {
+            if (!checkFileSize(file, errorArea)) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // 确定目标列表
+            let targetList = alipayFileList; // 默认 (不应该用到)
+            if (file.name.endsWith('.csv')) {
+                targetList = alipayFileList;
+            } else if (file.name.endsWith('.xlsx')) {
+                targetList = wechatFileList;
+            } else {
+                // 如果后续支持其他，这里扩展
+                targetList = alipayFileList;
+            }
+
+            const fileItem = createFileItem(file.name, '准备上传...');
+            targetList.appendChild(fileItem);
+
+            // 添加进度条
+            const progressDiv = document.createElement('div');
+            progressDiv.className = 'upload-progress';
+            progressDiv.innerHTML = '<div class="progress-bar"></div>';
+            fileItem.appendChild(progressDiv);
+            progressDiv.style.display = 'block';
+
+            try {
+                const response = await fetchWithRetry('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                }, 3);
+
+                const data = await response.json();
+                if (data.success) {
+                    updateFileItem(fileItem, data.filename, true, data.message);
+                    showToast('文件上传成功');
+                    handleUploadSuccess();
+                    // 上传成功后跳转到年度分析页面
+                    setTimeout(() => {
+                        window.location.href = "{{ url_for('yearly') }}";
+                    }, 1000);
+                } else {
+                    updateFileItem(fileItem, file.name, false, data.error);
+                    showError(data.error);
+                }
+            } catch (error) {
+                updateFileItem(fileItem, file.name, false, '上传失败，请重试');
+                showError('网络错误，请重试');
+            }
+        }
+
+        // 添加移动端检测
+        function isMobile() {
+            return window.innerWidth <= 768;
+        }
+
+        // 根据设备类型调整界面
+        function adjustForDevice() {
+            const isMobileView = isMobile();
+            const grid = document.querySelector('.split-layout');
+
+            if (isMobileView) {
+                grid.style.gridTemplateColumns = '1fr';
+            } else {
+                grid.style.gridTemplateColumns = '1fr 1fr';
+            }
+        }
+
+        // 监听窗口大小变化
+        window.addEventListener('resize', adjustForDevice);
+        adjustForDevice();
+
+        // 统一处理拖拽设置
+        function setupDragDrop(area, allowedExt) {
+            area.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                area.classList.add('dragover');
+            });
+
+            area.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+            });
+
+            area.addEventListener('drop', (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                handleFiles(files, allowedExt, area);
+            });
+        }
+
+        setupDragDrop(alipayUploadArea, '.csv');
+        setupDragDrop(wechatUploadArea, '.xlsx');
+
+        // 处理文件选择
+        alipayInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files, '.csv', alipayUploadArea);
+        });
+
+        wechatInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files, '.xlsx', wechatUploadArea);
+        });
+
+        // 加载现有文件列表
+        loadExistingFiles();
+
+        function handleFiles(files, allowedExt, errorArea) {
+            Array.from(files).forEach(file => {
+                if (file.name.toLowerCase().endsWith(allowedExt)) {
+                    uploadFile(file, errorArea);
+                } else {
+                    showError(`请上传 ${allowedExt} 格式的文件`, errorArea);
+                }
+            });
+        }
+
+        function loadExistingFiles() {
+            fetch('/api/files')
+                .then(response => response.json())
+                .then(data => {
+                    data.files.forEach(file => {
+                        const fileItem = createFileItem(file.name, '已上传', true);
+                        if (file.name.endsWith('.csv')) {
+                            alipayFileList.appendChild(fileItem);
+                        } else if (file.name.endsWith('.xlsx')) {
+                            wechatFileList.appendChild(fileItem);
+                        }
+                    });
+                });
+        }
+
+        function createFileItem(filename, status, isSuccess = null) {
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            item.innerHTML = `
+            <i class="fas ${filename.endsWith('.xlsx') ? 'fa-file-excel' : 'fa-file-csv'}"></i>
+            <span class="file-name">${filename}</span>
+            <span class="file-status ${isSuccess === null ? '' : isSuccess ? 'status-success' : 'status-error'}">${status}</span>
+            ${isSuccess !== null ? `
+                <button class="delete-btn" onclick="deleteFile('${filename}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            ` : ''}
+        `;
+            return item;
+        }
+
+        function updateFileItem(item, filename, success, message) {
+            item.querySelector('.file-name').textContent = filename;
+            item.querySelector('.file-status').textContent = message;
+            item.querySelector('.file-status').className = `file-status ${success ? 'status-success' : 'status-error'}`;
+
+            if (!item.querySelector('.delete-btn')) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                deleteBtn.onclick = () => deleteFile(filename);
+                item.appendChild(deleteBtn);
+            }
+        }
+
+        window.deleteFile = function (filename) {
+            if (confirm(`确定要删除文件 ${filename} 吗？`)) {
+                fetch(`/api/files/${filename}`, {
+                    method: 'DELETE'
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // 使用简单的 DOM 查找移除元素
+                            // 获取所有文件项
+                            const allItems = document.querySelectorAll('.file-item');
+                            let removed = false;
+
+                            allItems.forEach(item => {
+                                const nameElement = item.querySelector('.file-name');
+                                if (nameElement && nameElement.textContent === filename) {
+                                    item.remove();
+                                    removed = true;
+                                }
+                            });
+
+                            if (removed) {
+                                showToast('文件已删除');
+                            } else {
+                                // 如果没找到元素（虽然不太可能），刷新列表
+                                loadExistingFiles();
+                            }
+                        } else {
+                            showToast('删除失败：' + (data.error || '未知错误'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('删除请求失败');
+                    });
+            }
+        }
+
+        // 修改计时器更新函数
+        function updateTimer() {
+            if (window.isRedirecting) return;
+
+            fetch('/api/session/time_remaining')
+                .then(response => response.json())
+                .then(data => {
+                    const timeDisplay = document.getElementById('timeRemaining');
+
+                    // 如果会话还未开始（没有上传文件）
+                    if (!data.hasOwnProperty('remaining')) {
+                        timeDisplay.textContent = '--:--';
+                        return;
+                    }
+
+                    const remaining = data.remaining;
+                    if (remaining <= 0 || data.expired) {
+                        timeDisplay.textContent = '已过期';
+                        // 只在有文件的情况下才重定向
+                        if (localStorage.getItem('isUploading')) {
+                            window.isRedirecting = true;
+                            localStorage.removeItem('isUploading');
+                            window.location.href = '/';
+                        }
+                        return;
+                    }
+
+                    const minutes = Math.floor(remaining / 60);
+                    const seconds = remaining % 60;
+                    timeDisplay.textContent =
+                        `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                });
+        }
+
+        // 在文件上传成功时开始计时
+        function handleUploadSuccess() {
+            // 标记正在上传状态
+            localStorage.setItem('isUploading', 'true');
+            updateTimer();
+            setInterval(updateTimer, 1000);
+        }
+
+        // 在页面加载时检查是否需要开始计时
+        if (localStorage.getItem('isUploading')) {
+            updateTimer();
+            setInterval(updateTimer, 1000);
+        }
+
+        // 添加删除按钮事件处理
+        document.getElementById('deleteAllBtn').addEventListener('click', function () {
+            if (confirm('确定要删除所有账单数据吗？此操作不可恢复！')) {
+                fetch('/api/clear_data', {
+                    method: 'POST'
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // 清除本地存储的上传状态
+                            localStorage.removeItem('isUploading');
+                            // 刷新文件列表
+                            alipayFileList.innerHTML = '';
+                            wechatFileList.innerHTML = '';
+                            // 重置计时器显示
+                            document.getElementById('timeRemaining').textContent = '--:--';
+                            // 显示成功提示
+                            showToast('所有数据已清除');
+                        } else {
+                            showToast('删除失败：' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('删除失败，请重试');
+                    });
+            }
+        });
+    });
+</script>
+{% endblock %}

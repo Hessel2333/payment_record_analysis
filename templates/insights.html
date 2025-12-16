@@ -1,0 +1,1781 @@
+{% extends "base.html" %}
+
+{% block title %}消费分析{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js"></script>
+<style>
+    .scenario-tabs {
+        margin-bottom: 20px;
+    }
+
+    .tab-btn {
+        padding: 8px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--card-bg);
+        color: var(--secondary-text);
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500;
+    }
+
+    .tab-btn:hover {
+        background: var(--hover-bg);
+    }
+
+    .tab-btn.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="insights-page-header">
+    <h1 class="page-title">消费洞察</h1>
+    <div class="year-controls">
+        <button id="prevYear" class="year-button">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <span id="currentYear" class="year-display">2024年</span>
+        <button id="nextYear" class="year-button">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+    <div></div>
+</div>
+
+<!-- 顶部区域：资金流向 + 年度故事 -->
+<div class="top-analysis-section">
+    <!-- 桑基图 (资金流向) -->
+    <div class="analysis-card sankey-card">
+        <div class="card-header">
+            <h2 class="card-title">资金流向全景</h2>
+        </div>
+        <div class="card-content" id="sankeyChart"></div>
+    </div>
+
+    <!-- 年度故事入口 -->
+    <div class="analysis-card story-entry-card" onclick="showStoryMode()">
+        <div class="story-card-content">
+            <div class="story-icon">
+                <i class="fas fa-film"></i>
+            </div>
+            <div class="story-title">年度消费故事</div>
+            <div class="story-desc">点击开启您的时光之旅</div>
+            <div class="story-btn">立即播放</div>
+        </div>
+    </div>
+</div>
+
+<!-- 核心分析网格 (原先的四个板块) -->
+<div class="analysis-grid core-analysis-grid">
+    <!-- 消费画像 -->
+    <div class="analysis-card profile-card">
+        <div class="card-header">
+            <h2 class="card-title">消费画像</h2>
+        </div>
+        <div class="card-content profile-content" id="profileContent">
+            <!-- 动态内容 -->
+        </div>
+    </div>
+
+    <!-- 最常光顾 -->
+    <div class="analysis-card merchant-list-card">
+        <div class="card-header">
+            <h2 class="card-title">最常光顾</h2>
+        </div>
+        <div class="card-content">
+            <div class="merchant-list" id="merchantList">
+                <!-- 动态内容 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 消费场景分析 -->
+    <div class="analysis-card scenario-card">
+        <div class="card-header">
+            <h2 class="card-title">消费场景</h2>
+        </div>
+        <div class="card-content">
+            <div class="scenario-tabs">
+                <button class="tab-btn active" data-type="channel">消费渠道</button>
+                <button class="tab-btn" data-type="time">时段分布</button>
+                <button class="tab-btn" data-type="amount">金额层级</button>
+                <button class="tab-btn" data-type="payment">支付方式</button>
+            </div>
+            <div id="scenarioChart" class="chart-container"></div>
+        </div>
+    </div>
+
+    <!-- 消费习惯分析 -->
+    <div class="analysis-card habit-card">
+        <div class="card-header">
+            <h2 class="card-title">消费习惯</h2>
+        </div>
+        <div class="card-content">
+            <div class="habit-stats" id="habitStats">
+                <!-- 习惯统计将通过 JavaScript 动态添加 -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 高级洞察网格 -->
+<div class="advanced-insights-grid">
+    <!-- 拿铁因子 -->
+    <div class="analysis-card insight-card latte-card">
+        <div class="card-header">
+            <h2 class="card-title">
+                拿铁因子
+            </h2>
+        </div>
+        <div class="card-content" id="latteContent">
+            <!-- 动态内容 -->
+        </div>
+    </div>
+
+
+
+    <!-- 隐形订阅 -->
+    <div class="analysis-card insight-card sub-card">
+        <div class="card-header">
+            <h2 class="card-title">
+                隐形订阅
+            </h2>
+        </div>
+        <div class="card-content" id="subContent">
+            <!-- 动态内容 -->
+        </div>
+    </div>
+
+    <!-- 个人通胀 -->
+    <div class="analysis-card insight-card inflation-card">
+        <div class="card-header">
+            <h2 class="card-title">
+                消费通胀
+            </h2>
+        </div>
+        <div class="card-content" id="inflationContent">
+            <!-- 动态内容 -->
+        </div>
+    </div>
+
+    <!-- 品牌忠诚度 -->
+    <div class="analysis-card insight-card loyalty-card">
+        <div class="card-header">
+            <h2 class="card-title">
+                品牌忠诚
+            </h2>
+        </div>
+        <div class="card-content" id="loyaltyContent">
+            <!-- 动态内容 -->
+        </div>
+    </div>
+
+
+
+    <!-- 周末效应 -->
+    <div class="analysis-card insight-card weekend-card">
+        <div class="card-header">
+            <h2 class="card-title">
+                周末效应
+            </h2>
+        </div>
+        <div class="card-content" id="weekendContent">
+            <!-- 动态内容 -->
+        </div>
+    </div>
+</div>
+
+<!-- 高级可视化图表区域 -->
+<!-- 高级可视化图表区域 -->
+<div class="advanced-viz-section">
+    <h2 class="section-title">深度洞察</h2>
+
+    <!-- ============ 第一章：时间与趋势 (The When) ============ -->
+    <div class="viz-section-header">
+        <div class="section-subtitle"> <i class="fas fa-clock"></i> 时间密码</div>
+    </div>
+
+    <!-- 1. 河流图 (宏观趋势) -->
+    <div class="analysis-card full-width-viz-card">
+        <div class="card-header">
+            <h2 class="card-title">消费趋势河流</h2>
+        </div>
+        <div class="card-content" id="themeRiverChart"></div>
+    </div>
+
+    <!-- 2. 分布行 (生物钟 + 季节结构) -->
+    <div class="viz-row">
+        <!-- 热力图 (微观作息) -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    消费生物钟 (热力图)
+                    <span class="help-icon">
+                        <i class="fas fa-question-circle"></i>
+                        <span class="custom-tooltip">
+                            <strong>如何解读：</strong><br>
+                            这是您的“消费日历”。颜色越深，代表在该时段（如周五晚8点）消费越频繁。
+                        </span>
+                    </span>
+                </h2>
+            </div>
+            <div class="card-content" id="heatmapChart"></div>
+        </div>
+
+        <!-- 雷达图 (周期结构) -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h2 class="card-title">季度消费结构</h2>
+            </div>
+            <div class="card-content" id="radarChart"></div>
+        </div>
+    </div>
+
+    <!-- ============ 第二章：行为与心理 (The How) ============ -->
+    <div class="viz-section-header">
+        <div class="section-subtitle"> <i class="fas fa-brain"></i> 决策心理</div>
+    </div>
+
+    <!-- 3. 象限图 (决策分布 - 全宽) -->
+    <div class="analysis-card full-width-viz-card" style="height: 600px;">
+        <div class="card-header">
+            <h2 class="card-title">
+                消费象限 (频次 vs 均价)
+                <span class="help-icon">
+                    <i class="fas fa-question-circle"></i>
+                    <span class="custom-tooltip">
+                        <strong>消费习惯分析：</strong><br>
+                        • 右上：高频高价 (重点关注)<br>
+                        • 左上：低频高价 (大额支出)<br>
+                        • 右下：高频低价 (习惯性消费)<br>
+                        • 左下：低频低价 (偶发消费)
+                    </span>
+                </span>
+            </h2>
+        </div>
+        <div class="card-content" id="quadrantChart"></div>
+    </div>
+
+    <!-- 4. 和弦与漏斗 (流向与过程) -->
+    <div class="viz-row">
+        <!-- 和弦图 (周关联) -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    消费关联和弦
+                </h2>
+                <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                    展示一周七天中，您的消费主要流向了哪些类别
+                </div>
+            </div>
+            <div class="card-content" id="chordChart"></div>
+        </div>
+
+        <!-- 漏斗图 (金额分布) -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h2 class="card-title">消费金额漏斗</h2>
+            </div>
+            <div class="card-content" id="funnelChart"></div>
+        </div>
+    </div>
+
+
+    <!-- ============ 第三章：结构与细节 (The What) ============ -->
+    <div class="viz-section-header">
+        <div class="section-subtitle"> <i class="fas fa-chart-pie"></i> 结构解析</div>
+    </div>
+
+    <!-- 4. 帕累托 (二八定律) -->
+    <div class="analysis-card full-width-viz-card">
+        <div class="card-header">
+            <h2 class="card-title">
+                核心支出来源 (帕累托图)
+                <span class="help-icon">
+                    <i class="fas fa-question-circle"></i>
+                    <span class="custom-tooltip">
+                        <strong>二八定律分析：</strong><br>
+                        红线与 80% 刻度线交叉点左侧的分类，就是您需要重点控制的“核心支出”。
+                    </span>
+                </span>
+            </h2>
+        </div>
+        <div class="card-content" id="paretoChart" style="height: 400px;"></div>
+    </div>
+
+    <!-- 5. 词云与箱形图 -->
+    <div class="viz-row">
+        <!-- 词云 -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h2 class="card-title">消费热词云</h2>
+            </div>
+            <div class="card-content" id="wordCloudChart"></div>
+        </div>
+
+        <!-- 箱形图 (全透视) -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    消费分布云图
+                    <span class="help-icon">
+                        <i class="fas fa-question-circle"></i>
+                        <span class="custom-tooltip">
+                            <strong>如何解读：</strong><br>
+                            展示了消费金额的统计分布。
+                            • 灰色框：50% 的核心消费区间<br>
+                            • 孤点：在大额消费
+                        </span>
+                    </span>
+                </h2>
+            </div>
+            <div class="card-content" id="boxPlotChart"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 时光机 Modal -->
+<div id="storyModal" class="story-modal">
+    <div class="story-content">
+        <button class="close-story" onclick="closeStoryMode()"><i class="fas fa-times"></i></button>
+        <div class="story-slides" id="storySlides">
+            <!-- 动态生成幻灯片 -->
+        </div>
+        <div class="story-controls">
+            <button class="story-btn prev" onclick="prevSlide()"><i class="fas fa-chevron-left"></i></button>
+            <div class="story-indicators" id="storyIndicators"></div>
+            <button class="story-btn next" onclick="nextSlide()"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 修改全局变量声明
+    let scenarioChart;  // 只保留场景分析图表
+
+
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // 只初始化场景分析图表
+        scenarioChart = echarts.init(document.getElementById('scenarioChart'));
+
+        let currentYear = new Date().getFullYear();
+        let availableYears = [];
+        let currentFilter;  // 将从 TransactionFilterManager 获取
+
+        // 加载可用年份
+        function loadAvailableYears() {
+            fetch('/api/available_years')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        availableYears = data.years;
+                        currentYear = availableYears[0];  // 默认选择最新的年份
+
+                        // 初始化过滤器并加载数据
+                        currentFilter = TransactionFilterManager.init((filterType) => {
+                            currentFilter = filterType;
+                            loadAnalysisData();
+                        });
+
+                        updateYearDisplay();
+                        loadAnalysisData();
+                    }
+                });
+        }
+
+        // 更新年份显示
+        function updateYearDisplay() {
+            document.getElementById('currentYear').textContent = `${currentYear}年`;
+            const currentIndex = availableYears.indexOf(currentYear);
+            document.getElementById('prevYear').disabled = currentIndex >= availableYears.length - 1;
+            document.getElementById('nextYear').disabled = currentIndex <= 0;
+        }
+
+        // 修改加载分析数据函数，添加年份参数
+        function loadAnalysisData() {
+            // 构建查询参数
+            const params = new URLSearchParams({
+                year: currentYear
+            });
+
+            // 添加过滤器参数
+            if (currentFilter === 'large') {
+                params.append('min_amount', '1000');
+            } else if (currentFilter === 'small') {
+                params.append('max_amount', '1000');
+            }
+
+            fetch(`/api/analysis?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateAnalysis(data.data);
+                    } else {
+                        showToast('加载分析数据失败：' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('加载数据失败: ' + error.message);
+                });
+        }
+
+        // 修改 updateAnalysis 函数
+        function updateAnalysis(data) {
+            // 更新智能标签
+            updateTags(data.tags);
+
+            // 更新商家分析
+            updateMerchants(data.merchant_analysis);
+
+            // 更新消费场景图表，传入支付方式数据
+            updateScenarioChart(data.scenario_analysis, data.payment_analysis);
+
+            // 更新消费习惯统计 - 传入完整数据
+            updateHabitStats(data);
+
+            // 更新高级洞察
+            updateAdvancedInsights(data);
+        }
+
+        function updateAdvancedInsights(data) {
+            // 拿铁因子
+            const latte = data.latte_factor;
+            document.getElementById('latteContent').innerHTML = `
+                <div class="insight-stat-big">${formatMoney(latte.total_amount)}</div>
+                <div class="insight-desc">累计在 <span class="highlight">${latte.top_merchant}</span> 等小额消费上花费</div>
+                <div class="insight-meta">相当于 ${Math.floor(latte.total_amount / 30)} 杯咖啡</div>
+            `;
+
+
+
+            // 隐形订阅
+            const subs = data.subscription_analysis;
+            if (subs.length > 0) {
+                const topSub = subs[0];
+                const totalAnnual = subs.reduce((sum, item) => sum + item.annual_amount, 0);
+                document.getElementById('subContent').innerHTML = `
+                    <div class="insight-stat-big">${formatMoney(totalAnnual)}</div>
+                    <div class="insight-desc">预估年化订阅总支出</div>
+                    <div class="insight-list">
+                        ${subs.slice(0, 2).map(s => `
+                            <div class="insight-item">
+                                <span>${s.name}</span>
+                                <span>${formatMoney(s.monthly_amount)}/月</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                document.getElementById('subContent').innerHTML = `
+                    <div class="empty-state">未发现明显订阅支出</div>
+                `;
+            }
+
+            // 个人通胀
+            const inf = data.inflation_analysis;
+            const trendIcon = inf.trend === 'up' ? 'fa-arrow-up' : (inf.trend === 'down' ? 'fa-arrow-down' : 'fa-minus');
+            const trendColor = inf.trend === 'up' ? '#FF3B30' : (inf.trend === 'down' ? '#34C759' : '#8E8E93');
+            document.getElementById('inflationContent').innerHTML = `
+                <div class="insight-stat-big" style="color: ${trendColor}">
+                    <i class="fas ${trendIcon}"></i> ${Math.abs(inf.rate).toFixed(2)}%
+                </div>
+                <div class="insight-desc">季度客单价变化趋势</div>
+                <div class="insight-meta">从 ${formatMoney(inf.first_avg)} 变动至 ${formatMoney(inf.last_avg)}</div>
+            `;
+
+            // 品牌忠诚度
+            const loyalty = data.brand_loyalty;
+            if (loyalty) {
+                document.getElementById('loyaltyContent').innerHTML = `
+                    <div class="loyalty-row">
+                        <div class="loyalty-item">
+                            <div class="loyalty-value">${loyalty.top_amount.name}</div>
+                            <div class="loyalty-details">
+                                <span class="loyalty-amount">${formatMoney(loyalty.top_amount.value)}</span>
+                                <span class="loyalty-tag">真金白银</span>
+                            </div>
+                        </div>
+                        <div class="loyalty-item">
+                            <div class="loyalty-value">${loyalty.top_count.name}</div>
+                            <div class="loyalty-details">
+                                <span class="loyalty-amount">${loyalty.top_count.value}次</span>
+                                <span class="loyalty-tag">最为长情</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+
+
+            // 周末效应
+            const wm = data.weekend_monday;
+            const wmRatio = wm.ratio;
+            let wmDesc = "平稳型";
+            if (wmRatio > 1.5) wmDesc = "周末狂欢型";
+            else if (wmRatio < 0.8) wmDesc = "周一补偿型";
+
+            document.getElementById('weekendContent').innerHTML = `
+                <div class="insight-stat-big">${wmRatio.toFixed(2)}x</div>
+                <div class="insight-desc">周末日均消费是周一的倍数</div>
+                <div class="insight-meta">类型: ${wmDesc}</div>
+            `;
+
+            // 渲染桑基图
+            if (data.sankey_data && data.sankey_data.nodes.length > 0) {
+                renderSankeyChart(data.sankey_data);
+            }
+
+            // 保存故事数据供 Modal 使用
+            window.storyData = data.story_data;
+
+            // 渲染高级可视化图表
+            if (data.themeriver_data) {
+                renderThemeRiver(data.themeriver_data);
+            }
+            if (data.boxplot_data) {
+                renderBoxPlot(data.boxplot_data);
+            }
+            if (data.heatmap_data) {
+                renderHeatmap(data.heatmap_data);
+            }
+            if (data.pareto_data) {
+                renderParetoChart(data.pareto_data);
+            }
+            if (data.chord_data) {
+                renderChordChart(data.chord_data);
+            }
+            if (data.quadrant_data) {
+                renderQuadrantChart(data.quadrant_data); // 渲染象限图
+            }
+            if (data.funnel_data) {
+                renderFunnelChart(data.funnel_data);
+            }
+            if (data.radar_data) {
+                renderRadarChart(data.radar_data);
+            }
+            if (data.wordcloud_data) {
+                renderWordCloud(data.wordcloud_data);
+            }
+        }
+
+        // 更新智能标签和消费特征
+        function updateTags(data) {
+            const profileContent = document.getElementById('profileContent');
+            if (!profileContent) return;
+
+            const tagsHtml = `
+                <div class="tag-cloud">
+                    ${data.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                </div>
+            `;
+
+            const detailsHtml = `
+                <div class="profile-details">
+                    <div class="profile-feature">
+                        <div class="feature-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="feature-content">
+                            <div class="feature-title">消费时间</div>
+                            <div class="feature-description">${formatTimePattern(data.time_pattern)}</div>
+                        </div>
+                    </div>
+                    <div class="profile-feature">
+                        <div class="feature-icon">
+                            <i class="fas fa-shopping-bag"></i>
+                        </div>
+                        <div class="feature-content">
+                            <div class="feature-title">消费偏好</div>
+                            <div class="feature-description">${formatPreference(data.spending_preference)}</div>
+                        </div>
+                    </div>
+                    <div class="profile-feature">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="feature-content">
+                            <div class="feature-title">消费规律</div>
+                            <div class="feature-description">${formatPattern(data.spending_pattern)}</div>
+                        </div>
+                    </div>
+                    <div class="profile-feature">
+                        <div class="feature-icon">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <div class="feature-content">
+                            <div class="feature-title">消费能力</div>
+                            <div class="feature-description">${formatPower(data.spending_power)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            profileContent.innerHTML = tagsHtml + detailsHtml;
+        }
+
+        // 修改格式化函数，更精确地控制强调部分
+        function formatTimePattern(text) {
+            // 只强调具体时间段
+            return text.replace(/(夜间|早起|日间)/g, '<span class="highlight">$1</span>');
+        }
+
+        function formatPreference(text) {
+            // 分别强调分类名称和百分比
+            return text.replace(/最常消费的品类是/, '')  // 移除前缀文字
+                .replace(/([^，。]+?)(\([0-9.]+%\))/g, '<span class="highlight">$1</span><span class="percentage">$2</span>');
+        }
+
+        function formatPattern(text) {
+            // 只强调关键描述词
+            return text.replace(/(非常有规律|理性|较为均衡|比较随性)/g, '<span class="highlight">$1</span>');
+        }
+
+        function formatPower(text) {
+            // 分别强调金额和消费群体类型
+            return text.replace(
+                /日均消费([0-9]+)元/g, '日均消费<span class="amount">$1</span>元'
+            ).replace(
+                /，属于(高|中等|理性)消费人群/g, '，属于<span class="highlight">$1</span>消费人群'
+            );
+        }
+
+        // 更新商家分析
+        function updateMerchants(data) {
+            const merchantList = document.getElementById('merchantList');
+            merchantList.innerHTML = data.frequent_merchants.map((merchant, index) => `
+            <div class="merchant-item ${index < 3 ? 'top-' + (index + 1) : ''}">
+                <div class="merchant-info">
+                    <div class="merchant-rank">${index + 1}</div>
+                    <div class="merchant-details">
+                        <div class="merchant-name">${merchant.name}</div>
+                        <div class="merchant-meta">上次消费: ${merchant.last_visit}</div>
+                    </div>
+                </div>
+                <div class="merchant-stats">
+                    <div class="stat-group">
+                        <div class="label">消费金额</div>
+                        <div class="value">${formatMoney(merchant.amount)}</div>
+                    </div>
+                    <div class="stat-group">
+                        <div class="label">消费次数</div>
+                        <div class="value">${merchant.count}次</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        }
+
+        // 更新消费场景图表
+        function updateScenarioChart(data, paymentData) {
+            // 按类别分组数据
+            const groupedData = {
+                'channel': data.filter(item => item.category === '渠道'),
+                'time': data.filter(item => item.category === '时段'),
+                'amount': data.filter(item => item.category === '层级'),
+                'payment': paymentData.map(item => ({
+                    name: item.name,
+                    value: item.total_amount
+                }))
+            };
+
+            // 获取当前选中的标签类型
+            const currentType = document.querySelector('.tab-btn.active')?.dataset.type || 'channel';
+
+            // 渲染图表函数
+            function renderChart(type) {
+                const chartData = groupedData[type] || [];
+
+                // 计算总金额用于百分比
+                const total = chartData.reduce((sum, item) => sum + (item.value || 0), 0);
+
+                // 定义各类型的颜色方案
+                const colorSchemes = {
+                    channel: ['#007AFF', '#5856D6'],  // 线上/线下
+                    time: ['#FF9500', '#FF3B30', '#34C759', '#5856D6', '#007AFF', '#FF2D55'],  // 各时段
+                    amount: ['#FF3B30', '#FF9500', '#34C759', '#007AFF'],  // 金额层级
+                    payment: ['#007AFF', '#FF9500', '#34C759', '#5856D6', '#FF3B30', '#FF2D55', '#64D2FF']  // 支付方式
+                };
+
+                const option = {
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: function (params) {
+                            const percentage = ((params.value / total) * 100).toFixed(2);
+                            return `${params.name}<br/>金额：${formatMoney(params.value)}元<br/>占比：${percentage}%`;
+                        }
+                    },
+                    series: [{
+                        name: '金额分布',
+                        type: 'pie',
+                        radius: ['25%', '60%'],
+                        center: ['50%', '50%'],
+                        avoidLabelOverlap: true,
+                        itemStyle: {
+                            borderRadius: 5,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: true,
+                            position: 'outside',
+                            formatter: params => {
+                                const percentage = ((params.value / total) * 100).toFixed(2);
+                                return percentage > 1 ? `${params.name}\n${percentage}%` : '';
+                            },
+                            fontSize: 12,
+                            color: '#666',
+                            lineHeight: 16
+                        },
+                        labelLine: {
+                            show: params => {
+                                const percentage = ((params.value / total) * 100);
+                                return percentage > 1;
+                            },
+                            length: 8,
+                            length2: 8,
+                            smooth: true,
+                            maxSurfaceAngle: 80
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: 14,
+                                fontWeight: 'bold',
+                                formatter: params => {
+                                    const percentage = ((params.value / total) * 100).toFixed(2);
+                                    return `${params.name}\n${percentage}%`;
+                                }
+                            },
+                            scaleSize: 6
+                        },
+                        data: chartData.map((item, index) => ({
+                            name: item.name,
+                            value: item.value,
+                            itemStyle: {
+                                color: colorSchemes[type][index % colorSchemes[type].length]
+                            },
+                            label: {
+                                show: (item.value / total * 100) > 1
+                            },
+                            labelLine: {
+                                show: (item.value / total * 100) > 1
+                            }
+                        }))
+                    }]
+                };
+
+                scenarioChart.setOption(option, true);
+            }
+
+            // 绑定标签页切换事件
+            if (!scenarioChart.tabsInitialized) {
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        document.querySelectorAll('.tab-btn').forEach(b =>
+                            b.classList.remove('active'));
+                        this.classList.add('active');
+                        renderChart(this.dataset.type);
+                    });
+                });
+                scenarioChart.tabsInitialized = true;
+            }
+
+            // 渲染当前选中的类型
+            renderChart(currentType);
+        }
+
+        // 更新消费习惯统计
+        function updateHabitStats(data) {
+            const habit = data.habit_analysis;
+            const night = data.nighttime_analysis;
+            const engel = data.engel_coefficient;
+
+            // 计算恩格尔系数等级
+            let engelLevel = "富足";
+            if (engel.ratio > 60) engelLevel = "贫穷";
+            else if (engel.ratio > 50) engelLevel = "温饱";
+            else if (engel.ratio > 40) engelLevel = "小康";
+            else if (engel.ratio > 30) engelLevel = "富裕";
+
+            const habitStats = document.getElementById('habitStats');
+            habitStats.innerHTML = `
+            <div class="stat-item">
+                <div class="stat-value">${habit.daily_avg.toFixed(2)}</div>
+                <div class="stat-label">日均消费(元)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${habit.weekend_ratio}%</div>
+                <div class="stat-label">
+                    周末消费占比
+                    <span class="help-icon">
+                        <i class="fas fa-question-circle"></i>
+                        <span class="custom-tooltip">周六日的消费占总支出的比例</span>
+                    </span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${habit.fixed_expenses}%</div>
+                <div class="stat-label">
+                    固定支出占比
+                    <span class="help-icon">
+                        <i class="fas fa-question-circle"></i>
+                        <span class="custom-tooltip">每月都有消费记录的商家的支出被视为固定支出</span>
+                    </span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${habit.month_start_ratio}%</div>
+                <div class="stat-label">
+                    月初消费占比
+                    <span class="help-icon">
+                        <i class="fas fa-question-circle"></i>
+                        <span class="custom-tooltip">每月前5天的消费占比</span>
+                    </span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${night.ratio.toFixed(2)}%</div>
+                <div class="stat-label">
+                    深夜剁手
+                    <span class="help-icon">
+                        <i class="fas fa-moon"></i>
+                        <span class="custom-tooltip">最爱逛: ${night.top_merchant}</span>
+                    </span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${engel.ratio.toFixed(2)}%</div>
+                <div class="stat-label">
+                    恩格尔系数
+                    <span class="help-icon">
+                        <i class="fas fa-utensils"></i>
+                        <span class="custom-tooltip">食品支出: ${formatMoney(engel.amount)}元 (${engelLevel})</span>
+                    </span>
+                </div>
+            </div>
+        `;
+        }
+
+        // 绑定年份切换按钮事件
+        document.getElementById('prevYear').addEventListener('click', function () {
+            const currentIndex = availableYears.indexOf(currentYear);
+            if (currentIndex < availableYears.length - 1) {
+                currentYear = availableYears[currentIndex + 1];
+                updateYearDisplay();
+                loadAnalysisData();
+            }
+        });
+
+        document.getElementById('nextYear').addEventListener('click', function () {
+            const currentIndex = availableYears.indexOf(currentYear);
+            if (currentIndex > 0) {
+                currentYear = availableYears[currentIndex - 1];
+                updateYearDisplay();
+                loadAnalysisData();
+            }
+        });
+
+        // 修改 resize 事件处理
+        window.addEventListener('resize', function () {
+            if (scenarioChart) scenarioChart.resize();
+        });
+
+        // 初始化
+        loadAvailableYears();
+    });
+
+    // ============ 高级可视化图表渲染函数 ============
+
+    // 和弦图 (使用 Graph Circular Layout 模拟)
+    function renderChordChart(data) {
+        const chartDom = document.getElementById('chordChart');
+        if (!chartDom || !data || !data.nodes || data.nodes.length === 0) return;
+
+        const myChart = echarts.init(chartDom);
+
+        // 计算最大值和最小值用于线宽映射
+        let maxValue = 0;
+        let minValue = Infinity;
+        data.links.forEach(link => {
+            maxValue = Math.max(maxValue, link.value);
+            minValue = Math.min(minValue, link.value);
+        });
+
+        // 为节点注入颜色配置，确保连线能正确继承颜色
+        const coloredNodes = data.nodes.map(node => ({
+            ...node,
+            itemStyle: {
+                color: window.getCategoryColor(node.name)
+            }
+        }));
+
+        // 预处理 links，添加线宽
+        const processedLinks = data.links.map(link => {
+            // 线性映射：最小1px，最大8px
+            let width = 1;
+            if (maxValue > minValue) {
+                width = 1 + (link.value - minValue) / (maxValue - minValue) * 7;
+            }
+            return {
+                ...link,
+                lineStyle: {
+                    width: width,
+                    color: window.getCategoryColor(link.target),
+                    curveness: 0.3,
+                    opacity: 0.7
+                },
+                // 为每条线单独设置高亮样式，保持粗细比例
+                emphasis: {
+                    lineStyle: {
+                        width: width + 3, // 高亮时增加3px
+                        opacity: 1
+                    }
+                }
+            };
+        });
+
+        const option = {
+            tooltip: {
+                formatter: function (params) {
+                    if (params.dataType === 'edge') {
+                        return params.data.source + ' -> ' + params.data.target + '<br/>消费金额: ¥' + formatMoney(params.data.value);
+                    } else {
+                        return params.name;
+                    }
+                }
+            },
+            series: [{
+                type: 'graph',
+                layout: 'circular',
+                circular: {
+                    rotateLabel: true
+                },
+                data: coloredNodes,
+                links: processedLinks,
+                roam: false, // 禁止缩放和平移，避免误触
+                zoom: 0.75, // 默认缩放比例 75%
+
+                label: {
+                    show: true,
+                    position: 'right',
+                    formatter: '{b}'
+                },
+
+                emphasis: {
+                    focus: 'adjacency',
+                    lineStyle: {
+                        opacity: 1
+                    }
+                },
+                blur: { // 未选中项淡化处理
+                    itemStyle: {
+                        opacity: 0.1
+                    },
+                    lineStyle: {
+                        opacity: 0.1
+                    }
+                },
+            }]
+        };
+
+        myChart.setOption(option);
+        window.addEventListener('resize', () => myChart.resize());
+    }
+
+    // 漏斗图
+    function renderFunnelChart(data) {
+        const chartDom = document.getElementById('funnelChart');
+        if (!chartDom || !data || data.length === 0) return;
+
+        const myChart = echarts.init(chartDom);
+
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: function (params) {
+                    return params.name + ': ¥' + formatMoney(params.value) + ' (' + params.percent + '%)';
+                }
+            },
+            series: [
+                {
+                    name: '消费漏斗',
+                    type: 'funnel',
+                    left: '10%',
+                    top: 60,
+                    bottom: 60,
+                    width: '80%',
+                    min: 0,
+                    max: data[0].value, // 使用最大值作为基准
+                    minSize: '0%',
+                    maxSize: '100%',
+                    sort: 'descending',
+                    gap: 2,
+                    label: {
+                        show: true,
+                        position: 'inside',
+                        formatter: '{b}'
+                    },
+                    labelLine: {
+                        length: 10,
+                        lineStyle: {
+                            width: 1,
+                            type: 'solid'
+                        }
+                    },
+                    itemStyle: {
+                        borderColor: '#fff',
+                        borderWidth: 1
+                    },
+                    emphasis: {
+                        label: {
+                            fontSize: 20
+                        }
+                    },
+                    data: data
+                }
+            ]
+        };
+
+        myChart.setOption(option);
+        window.addEventListener('resize', () => myChart.resize());
+    }
+
+    // 消费象限图 (散点图)
+    function renderQuadrantChart(data) {
+        const chartDom = document.getElementById('quadrantChart');
+        if (!chartDom || !data || data.length === 0) return;
+
+        const myChart = echarts.init(chartDom);
+
+        // 计算平均值用于辅助线
+        const avgFreq = data.reduce((sum, item) => sum + item.frequency, 0) / data.length;
+        const avgAmount = data.reduce((sum, item) => sum + item.avg_amount, 0) / data.length;
+
+        const option = {
+            tooltip: {
+                formatter: function (params) {
+                    const item = params.data;
+                    return `
+                        <div style="font-weight:bold;margin-bottom:5px;">${item.name}</div>
+                        分类：${item.category}<br/>
+                        频次：${item.frequency} 次<br/>
+                        均价：¥${formatMoney(item.avg_amount)}<br/>
+                        总额：¥${formatMoney(item.total_amount)}
+                    `;
+                }
+            },
+            grid: {
+                left: '5%',
+                right: '10%',
+                bottom: '10%',
+                top: '10%',
+                containLabel: true
+            },
+            xAxis: {
+                name: '消费频次 (次)',
+                type: 'log',
+                logBase: 2,
+                splitLine: {
+                    lineStyle: {
+                        type: 'dashed'
+                    }
+                },
+                axisLabel: {
+                    formatter: (value) => {
+                        return value === 1 || value % 10 === 0 || value % 2 === 0 ? value : '';
+                    }
+                }
+            },
+            yAxis: {
+                name: '单笔均价 (元)',
+                type: 'log',
+                logBase: 2,
+                splitLine: {
+                    lineStyle: {
+                        type: 'dashed'
+                    }
+                },
+                axisLabel: {
+                    formatter: (value) => {
+                        return value >= 1000 ? (value / 1000) + 'k' : value;
+                    }
+                }
+            },
+            series: [{
+                type: 'scatter',
+                data: data.map(item => ({
+                    ...item,
+                    value: [item.frequency, item.avg_amount],
+                    // 直接计算大小，避免函数回调可能导致的问题
+                    symbolSize: Math.max(10, Math.min(Math.log(item.total_amount) * 5, 60)),
+                    itemStyle: {
+                        color: window.getCategoryColor(item.category),
+                        shadowBlur: 10,
+                        shadowColor: 'rgba(0, 0, 0, 0.2)'
+                    }
+                })),
+                markLine: {
+                    silent: true,
+                    lineStyle: {
+                        color: '#999',
+                        type: 'solid',
+                        width: 1
+                    },
+                    data: [
+                        { xAxis: avgFreq, name: '平均频次' },
+                        { yAxis: avgAmount, name: '平均均价' }
+                    ]
+                }
+            }]
+        };
+
+        myChart.setOption(option);
+        window.addEventListener('resize', () => myChart.resize());
+    }
+
+    // 雷达图
+    function renderRadarChart(data) {
+        const chartDom = document.getElementById('radarChart');
+        if (!chartDom || !data || !data.indicator || data.indicator.length === 0) return;
+
+        const myChart = echarts.init(chartDom);
+
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: function (params) {
+                    let res = params.name + '<br/>';
+                    // params.value 是数组，需要对应 indicator
+                    data.indicator.forEach((item, index) => {
+                        res += item.name + ': ¥' + formatMoney(params.value[index]) + '<br/>';
+                    });
+                    return res;
+                }
+            },
+            legend: {
+                data: data.series.map(item => item.name),
+                top: 10
+            },
+            radar: {
+                indicator: data.indicator,
+                radius: '65%'
+            },
+            series: [{
+                name: '季度消费结构',
+                type: 'radar',
+                data: data.series
+            }]
+        };
+
+        myChart.setOption(option);
+        window.addEventListener('resize', () => myChart.resize());
+    }
+
+    // 词云图
+    function renderWordCloud(data) {
+        const chartDom = document.getElementById('wordCloudChart');
+        if (!chartDom || !data || data.length === 0) return;
+
+        const myChart = echarts.init(chartDom);
+
+        const option = {
+            tooltip: {
+                show: true,
+                formatter: function (params) {
+                    return params.name + ': ¥' + formatMoney(params.value);
+                }
+            },
+            series: [{
+                type: 'wordCloud',
+                shape: 'circle',
+                left: 'center',
+                top: 'center',
+                width: '90%',
+                height: '90%',
+                right: null,
+                bottom: null,
+                sizeRange: [12, 60],
+                rotationRange: [0, 0],
+                rotationStep: 0,
+                gridSize: 8,
+                drawOutOfBound: false,
+                layoutAnimation: true,
+                textStyle: {
+                    fontFamily: 'sans-serif',
+                    fontWeight: 'bold',
+                    color: function () {
+                        return 'rgb(' + [
+                            Math.round(Math.random() * 160),
+                            Math.round(Math.random() * 160),
+                            Math.round(Math.random() * 160)
+                        ].join(',') + ')';
+                    }
+                },
+                emphasis: {
+                    focus: 'self',
+                    textStyle: {
+                        shadowBlur: 10,
+                        shadowColor: '#333'
+                    }
+                },
+                data: data
+            }]
+        };
+
+        myChart.setOption(option);
+        window.addEventListener('resize', () => myChart.resize());
+    }
+
+    // 河流图
+    function renderThemeRiver(data) {
+        const chartDom = document.getElementById('themeRiverChart');
+        if (!chartDom || !data || !data.data || data.data.length === 0) return;
+
+        const myChart = echarts.init(chartDom);
+
+        // 转换数据格式为 ThemeRiver 需要的格式 [[date, value, name], ...]
+        const themeRiverData = data.data.map(item => [item[0], item[2], item[1]]);
+
+        // 获取分类颜色
+        const colors = data.categories.map(cat => window.getCategoryColor(cat));
+
+        const option = {
+            color: colors, // 应用全局颜色配置
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'line',
+                    lineStyle: {
+                        color: 'rgba(0,0,0,0.2)',
+                        width: 1,
+                        type: 'solid'
+                    }
+                },
+                formatter: function (params) {
+                    if (!params || params.length === 0) return '';
+                    // 获取日期 (params[0].axisValue 可能是时间戳或日期字符串)
+                    const date = new Date(params[0].axisValue);
+                    const dateStr = date.getFullYear() + '-' + (date.getMonth() + 1).toString().padStart(2, '0');
+
+                    let result = '<div style="font-weight:bold;margin-bottom:5px;">' + dateStr + '</div>';
+
+                    // 按金额降序排列
+                    const sortedParams = [...params].sort((a, b) => b.value[1] - a.value[1]);
+
+                    sortedParams.forEach(item => {
+                        // item.value: [date, value, name]
+                        const name = item.value[2];
+                        const value = item.value[1];
+                        result += '<div style="display:flex;justify-content:space-between;align-items:center;min-width:150px;">' +
+                            '<span>' + item.marker + ' ' + name + '</span>' +
+                            '<span style="font-weight:bold;margin-left:15px;">¥' + formatMoney(value) + '</span>' +
+                            '</div>';
+                    });
+                    return result;
+                }
+            },
+            legend: {
+                data: data.categories,
+                top: 10,
+                textStyle: {
+                    fontSize: 12
+                }
+            },
+            singleAxis: {
+                top: 50,
+                bottom: 50,
+                axisTick: {},
+                axisLabel: {},
+                type: 'time',
+                axisPointer: {
+                    animation: true,
+                    label: {
+                        show: true
+                    }
+                },
+                splitLine: {
+                    show: true,
+                    lineStyle: {
+                        type: 'dashed',
+                        opacity: 0.2
+                    }
+                }
+            },
+            series: [
+                {
+                    type: 'themeRiver',
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 20,
+                            shadowColor: 'rgba(0, 0, 0, 0.8)'
+                        }
+                    },
+                    data: themeRiverData
+                }
+            ]
+        };
+
+        myChart.setOption(option);
+        window.addEventListener('resize', () => myChart.resize());
+    }
+
+    // 消费分布云图 (Hybrid Box-Strip Plot)
+    function renderBoxPlot(data) {
+        const chartDom = document.getElementById('boxPlotChart');
+        if (!chartDom || !data || !data.data || data.data.length === 0) return;
+
+        const myChart = echarts.init(chartDom);
+
+        // --- 核心修复：添加占位数据以对齐坐标系 ---
+        // 1. 复制并扩展分类数组，头部添加空字符串
+        const alignedCategories = ['', ...data.categories];
+
+        // 2. 扩展箱形图数据，头部添加空数据
+        const alignedBoxData = [[], ...data.box_data];
+
+        // 定义生成 Series 数据的工厂函数
+        // isDetailMode: true (雨云模式 - 左右分列), false (全览模式 - 居中叠加)
+        function getSeriesConfig(isDetailMode) {
+            const seriesData = data.data.map(item => {
+                let offset, jitterRange;
+                if (isDetailMode) {
+                    // 详情模式：调整比例为 1:3
+                    // 箱子占 20% 空间，散点占更多，且右移
+                    offset = 0.35; // 进一步右移 (原0.25)
+                    jitterRange = 0.5; // 范围变大 (原0.3)
+                } else {
+                    // 全览模式
+                    offset = 0;
+                    jitterRange = 0.6;
+                }
+
+                const jitter = (Math.random() - 0.5) * jitterRange;
+                return {
+                    value: [item.c + 1 + offset + jitter, item.v],
+                    merchant: item.m,
+                    date: item.d,
+                    categoryName: data.categories[item.c]
+                };
+            });
+
+            return {
+                boxWidth: isDetailMode ? '20%' : '50%', // 详情模式下箱子更窄 (原35%)
+                scatterData: seriesData
+            };
+        }
+
+        // 初始状态：全览模式
+        const initialConfig = getSeriesConfig(false);
+
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: function (params) {
+                    if (params.seriesType === 'boxplot') {
+                        return `${params.name}<br/>
+                                最大值: ${formatMoney(params.data[5])}<br/>
+                                Q3: ${formatMoney(params.data[4])}<br/>
+                                中位数: ${formatMoney(params.data[3])}<br/>
+                                Q1: ${formatMoney(params.data[2])}<br/>
+                                最小值: ${formatMoney(params.data[1])}`;
+                    } else {
+                        const d = params.data;
+                        return `<strong>${d.categoryName}</strong><br/>
+                                ${d.date}<br/>
+                                ${d.merchant}<br/>
+                                <strong>¥${formatMoney(d.value[1])}</strong>`;
+                    }
+                }
+            },
+            grid: {
+                left: '10%',
+                right: '10%',
+                bottom: '15%'
+            },
+            dataZoom: [
+                {
+                    type: 'inside',
+                    xAxisIndex: [0, 1],
+                    filterMode: 'filter',
+                    minSpan: 10,
+                    // 关键：禁用默认的滚轮缩放和平移，改为手动接管
+                    zoomOnMouseWheel: false,
+                    moveOnMouseWheel: false,
+                    moveOnTouch: false
+                }
+            ],
+            xAxis: [
+                {
+                    type: 'category',
+                    data: alignedCategories,
+                    boundaryGap: true,
+                    axisLabel: {
+                        interval: 0,
+                        rotate: 0,
+                        formatter: function (value) {
+                            return value.length > 4 ? value.substring(0, 4) + '..' : value;
+                        }
+                    },
+                    splitLine: {
+                        show: true,
+                        lineStyle: {
+                            type: 'dashed'
+                        }
+                    },
+                    axisTick: {
+                        alignWithLabel: true
+                    }
+                },
+                {
+                    type: 'value',
+                    min: -0.5,
+                    max: alignedCategories.length - 0.5,
+                    show: false,
+                    gridIndex: 0
+                }
+            ],
+            yAxis: {
+                type: 'log',
+                logBase: 10,
+                min: 1,
+                name: '金额 (元)',
+                splitLine: {
+                    show: true,
+                    lineStyle: {
+                        color: '#eee'
+                    }
+                },
+                axisLabel: {
+                    formatter: (value) => {
+                        return value >= 1000 ? (value / 1000) + 'k' : value;
+                    }
+                }
+            },
+            series: [
+                {
+                    name: 'summary',
+                    type: 'boxplot',
+                    xAxisIndex: 0,
+                    data: alignedBoxData,
+                    boxWidth: initialConfig.boxWidth,
+                    itemStyle: {
+                        color: 'rgba(0, 0, 0, 0.02)',
+                        borderColor: '#666',
+                        borderWidth: 1.5
+                    },
+                    symbolSize: 0,
+                    z: 10,
+                    emphasis: {
+                        itemStyle: {
+                            color: 'rgba(0, 0, 0, 0.1)',
+                            borderWidth: 2
+                        }
+                    }
+                },
+                {
+                    name: 'transaction',
+                    type: 'scatter',
+                    xAxisIndex: 1,
+                    symbolSize: 6,
+                    itemStyle: {
+                        color: function (params) {
+                            return window.getCategoryColor(params.data.categoryName);
+                        },
+                        opacity: 0.6,
+                        shadowBlur: 2,
+                        shadowColor: 'rgba(0, 0, 0, 0.2)'
+                    },
+                    data: initialConfig.scatterData,
+                    z: 1
+                }
+            ]
+        };
+
+        myChart.setOption(option);
+
+        let lastWheelTime = 0;
+
+        // 手动监听滚轮事件，实现“切页”效果
+        myChart.getZr().on('mousewheel', function (params) {
+            const now = Date.now();
+            if (now - lastWheelTime < 250) return; // 防抖，避免切太快
+
+            const opt = myChart.getOption();
+            // startValue 和 endValue 可能是 undefined，需要 fallback 到 start/end 百分比计算
+            // 或者直接用 dataZoom model 的 extent
+            const dataZoomModel = myChart.getModel().getComponent('dataZoom', 0);
+            const range = dataZoomModel.getAxisProxy('x', 0).getDataValueWindow(); // [min, max]
+            const currentSpan = range[1] - range[0];
+
+            // 只有在详情模式下 (span 约为 0.8) 才启用切页
+            if (currentSpan < 1.5) {
+                lastWheelTime = now;
+
+                const currentIndex = Math.round((range[0] + range[1]) / 2);
+                const wheelDelta = params.wheelDelta;
+                let nextIndex = currentIndex;
+
+                // wheelDelta > 0 是向上滚 (左移)，< 0 是向下滚 (右移)
+                if (wheelDelta > 0) {
+                    nextIndex = currentIndex - 1;
+                } else if (wheelDelta < 0) {
+                    nextIndex = currentIndex + 1;
+                }
+
+                // 边界检查 (排除 index 0 的占位符)
+                if (nextIndex >= 1 && nextIndex < alignedCategories.length) {
+                    myChart.dispatchAction({
+                        type: 'dataZoom',
+                        // 始终维持收窄的视口
+                        startValue: nextIndex - 0.4,
+                        endValue: nextIndex + 0.4
+                    });
+                }
+
+                // 阻止默认滚动行为 (尽管已经在 option 里禁用了，双重保险)
+                params.event.stop();
+            }
+        });
+
+        // 监听缩放事件，动态切换布局
+        myChart.on('dataZoom', function (params) {
+            // 这里使用 getOption 获取的 start/end 是百分比
+            // 为了更精确，建议结合 getComponent model，但为了简单，这里用百分比估算即可
+            // 或者复用上面的 range 计算逻辑
+
+            // 简单逻辑：如果 startValue/endValue 被设置了，可以直接计算差值
+            // 但 dataZoom 事件并不总是带 value，有时也是 start/end 百分比
+
+            const dataZoomModel = myChart.getModel().getComponent('dataZoom', 0);
+            const range = dataZoomModel.getAxisProxy('x', 0).getDataValueWindow();
+            const span = range[1] - range[0];
+
+            const isDetailMode = span < 1.5; // Window size < 1.5 categories
+
+            const newConfig = getSeriesConfig(isDetailMode);
+
+            myChart.setOption({
+                series: [
+                    { name: 'summary', boxWidth: newConfig.boxWidth },
+                    { name: 'transaction', data: newConfig.scatterData }
+                ]
+            });
+        });
+
+        myChart.on('click', function (params) {
+            if (params.componentType === 'series') {
+                let targetIndex;
+                if (params.seriesType === 'boxplot') {
+                    // 箱形图: index 已经包含了占位符，直接使用
+                    targetIndex = params.dataIndex;
+                } else if (params.seriesType === 'scatter') {
+                    // 散点图: value[0] 是 index + jitter，四舍五入即可
+                    targetIndex = Math.round(params.data.value[0]);
+                }
+
+                // 只有当点击的不是占位符时才缩放
+                if (targetIndex !== undefined && targetIndex > 0) {
+                    myChart.dispatchAction({
+                        type: 'dataZoom',
+                        // 精确控制缩放范围，锁定这一列
+                        // 收窄范围到 +/- 0.4，避免触碰到邻居分类的边界(+/- 0.5)导致显示多余分类
+                        startValue: targetIndex - 0.4,
+                        endValue: targetIndex + 0.4
+                    });
+                }
+            }
+        });
+
+        // 点击空白处还原
+        myChart.getZr().on('click', function (params) {
+            if (!params.target) {
+                myChart.dispatchAction({
+                    type: 'dataZoom',
+                    start: 0,
+                    end: 100
+                });
+            }
+        });
+
+        window.addEventListener('resize', () => myChart.resize());
+    }
+
+    // 热力图
+    function renderHeatmap(data) {
+        const chartDom = document.getElementById('heatmapChart');
+        if (!chartDom || !data || data.length === 0) return;
+
+        const myChart = echarts.init(chartDom);
+
+        const hours = Array.from({ length: 24 }, (_, i) => i + '点');
+        const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+        // data: [[hour, weekday, value], ...]
+        const maxValue = Math.max(...data.map(item => item[2]));
+
+        const option = {
+            tooltip: {
+                position: 'top',
+                formatter: function (params) {
+                    return `${days[params.value[1]]} ${hours[params.value[0]]}<br />消费频次: ${params.value[2]}`;
+                }
+            },
+            grid: {
+                height: '50%',
+                top: '10%',
+                left: '15%'
+            },
+            xAxis: {
+                type: 'category',
+                data: hours,
+                splitArea: {
+                    show: true
+                },
+                axisLabel: {
+                    interval: 2
+                }
+            },
+            yAxis: {
+                type: 'category',
+                data: days,
+                splitArea: {
+                    show: true
+                }
+            },
+            visualMap: {
+                min: 0,
+                max: maxValue,
+                calculable: true,
+                orient: 'horizontal',
+                left: 'center',
+                bottom: '0%',
+                inRange: {
+                    color: ['#f0f9ff', '#bae6fd', '#0ea5e9', '#0284c7'] // Github style blue
+                }
+            },
+            series: [{
+                name: 'Punch Card',
+                type: 'heatmap',
+                data: data,
+                label: {
+                    show: false
+                },
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }]
+        };
+
+        myChart.setOption(option);
+        window.addEventListener('resize', () => myChart.resize());
+    }
+
+    // 帕累托图
+    function renderParetoChart(data) {
+        const chartDom = document.getElementById('paretoChart');
+        if (!chartDom || !data || !data.categories || data.categories.length === 0) return;
+
+        const myChart = echarts.init(chartDom);
+
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross',
+                    crossStyle: {
+                        color: '#999'
+                    }
+                }
+            },
+            grid: {
+                right: '10%',
+                left: '5%',
+                bottom: '10%'
+            },
+            legend: {
+                data: ['消费金额', '累积占比']
+            },
+            xAxis: [
+                {
+                    type: 'category',
+                    data: data.categories,
+                    axisPointer: {
+                        type: 'shadow'
+                    },
+                    axisLabel: {
+                        interval: 0,
+                        rotate: 0
+                    }
+                }
+            ],
+            yAxis: [
+                {
+                    type: 'value',
+                    name: '金额',
+                    axisLabel: {
+                        formatter: '{value}'
+                    }
+                },
+                {
+                    type: 'value',
+                    name: '累积占比',
+                    min: 0,
+                    max: 100,
+                    interval: 20,
+                    axisLabel: {
+                        formatter: '{value} %'
+                    }
+                }
+            ],
+            series: [
+                {
+                    name: '消费金额',
+                    type: 'bar',
+                    data: data.values,
+                    itemStyle: {
+                        color: function (params) {
+                            return window.getCategoryColor(params.name);
+                        }
+                    }
+                },
+                {
+                    name: '累积占比',
+                    type: 'line',
+                    yAxisIndex: 1,
+                    data: data.percentages,
+                    itemStyle: {
+                        color: '#5470c6'
+                    },
+                    markLine: {
+                        data: [
+                            { yAxis: 80, name: '80%线' }
+                        ],
+                        lineStyle: {
+                            color: '#ee6666',
+                            type: 'dashed'
+                        }
+                    }
+                }
+            ]
+        };
+
+        myChart.setOption(option);
+        window.addEventListener('resize', () => myChart.resize());
+    }
+
+</script>
+{% endblock %}

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>支付宝账单分析 - {% block title %}{% endblock %}</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- 引入全局样式 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- 引入全局 JavaScript 配置 -->
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-wallet" style="margin-right: 12px; color: var(--primary-color);"></i>
+                <span>账单分析</span>
+            </div>
+            <nav class="nav-menu">
+                <a href="{{ url_for('index') }}" class="nav-item {% if active_page == 'index' %}active{% endif %}">
+                    <i class="fas fa-home"></i>
+                    <span>首页</span>
+                </a>
+                <a href="{{ url_for('yearly') }}" class="nav-item {% if active_page == 'yearly' %}active{% endif %}">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>年度总览</span>
+                </a>
+                <a href="{{ url_for('monthly') }}" class="nav-item {% if active_page == 'monthly' %}active{% endif %}">
+                    <i class="fas fa-chart-line"></i>
+                    <span>月度分析</span>
+                </a>
+                <a href="{{ url_for('category') }}"
+                    class="nav-item {% if active_page == 'category' %}active{% endif %}">
+                    <i class="fas fa-tags"></i>
+                    <span>分类分析</span>
+                </a>
+                <a href="{{ url_for('time') }}" class="nav-item {% if active_page == 'time' %}active{% endif %}">
+                    <i class="fas fa-clock"></i>
+                    <span>时间分析</span>
+                </a>
+                <a href="{{ url_for('insights') }}"
+                    class="nav-item {% if active_page == 'insights' %}active{% endif %}">
+                    <i class="fas fa-project-diagram"></i>
+                    <span>消费洞察</span>
+                </a>
+                <a href="{{ url_for('transactions') }}"
+                    class="nav-item {% if active_page == 'transactions' %}active{% endif %}">
+                    <i class="fas fa-list"></i>
+                    <span>交易记录</span>
+                </a>
+                <a href="{{ url_for('settings') }}"
+                    class="nav-item {% if active_page == 'settings' %}active{% endif %}">
+                    <i class="fas fa-cog"></i>
+                    <span>设置</span>
+                </a>
+            </nav>
+        </div>
+        <main class="content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <div class="floating-menu">
+        <button class="filter-btn" data-filter="all">
+            <i class="fas fa-list-ul"></i>
+            <span>全部交易</span>
+        </button>
+        <button class="filter-btn" data-filter="large">
+            <i class="fas fa-coins"></i>
+            <span>仅大额交易</span>
+        </button>
+        <button class="filter-btn" data-filter="small">
+            <i class="fas fa-coffee"></i>
+            <span>仅小额交易</span>
+        </button>
+    </div>
+    <script>
+        // 立即执行状态设置，防止闪烁
+        (function () {
+            try {
+                const currentFilter = localStorage.getItem('transactionFilter') || 'all';
+                const buttons = document.querySelectorAll('.filter-btn');
+                buttons.forEach(btn => {
+                    if (btn.dataset.filter === currentFilter) {
+                        btn.classList.add('active');
+                    }
+                });
+            } catch (e) {
+                // 如果出错，默认选中第一个
+                document.querySelector('.filter-btn').classList.add('active');
+            }
+        })();
+    </script>
+    <div id="detailModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">交易详情</h2>
+                <div class="modal-actions">
+                    <div class="sort-controls">
+                        <button class="sort-btn active" data-sort="time">
+                            <i class="fas fa-clock"></i>
+                            按时间
+                        </button>
+                        <button class="sort-btn" data-sort="amount">
+                            <i class="fas fa-yen-sign"></i>
+                            按金额
+                        </button>
+                    </div>
+                    <button class="modal-close">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="transaction-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="sortable time-column" data-sort="time">
+                                    <span>交易时间</span>
+                                    <i class="fas fa-sort-down"></i>
+                                </th>
+                                <th>商品说明</th>
+                                <th>交易分类</th>
+                                <th class="sortable amount-column" data-sort="amount">
+                                    <span>金额</span>
+                                    <i class="fas fa-sort"></i>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionList">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 添加提示框 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- 全局加载状态 -->
+    <div id="globalLoader" class="global-loader" style="display: none;">
+        <div class="loader-content">
+            <div class="spinner"></div>
+            <div class="loader-text">加载中...</div>
+        </div>
+    </div>
+
+    <!-- 全局引导提示 -->
+    <div id="guideTip" class="guide-tip" style="display: none;">
+        <div class="guide-content">
+            <div class="guide-text"></div>
+            <div class="guide-actions">
+                <button class="guide-next">下一步</button>
+                <button class="guide-skip">跳过</button>
+            </div>
+        </div>
+    </div>
+
+    {% block scripts %}{% endblock %}
+    <script>
+
+
+        document.addEventListener('DOMContentLoaded', function () {
+            let sessionCheckTimer = null;
+            const CHECK_INTERVAL = 15000; // 15秒
+
+            // 检查当前页面是否需要会话检查
+            function shouldCheckSession() {
+                const noCheckPaths = ['/', '/settings', '/index'];
+                return !noCheckPaths.includes(window.location.pathname);
+            }
+
+            async function checkSessionStatus() {
+                if (window.isRedirecting) {
+                    console.debug('Skipping check: redirecting');
+                    return;
+                }
+
+                try {
+                    console.debug('Performing session check');
+                    const response = await fetch('/api/session/time_remaining');
+                    const data = await response.json();
+
+                    const timeDisplay = document.getElementById('timeRemaining');
+                    if (timeDisplay) {
+                        if (data.active) {
+                            const minutes = Math.floor(data.remaining / 60);
+                            const seconds = data.remaining % 60;
+                            timeDisplay.textContent =
+                                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                            if (data.warning) {
+                                timeDisplay.classList.add('warning');
+                                showToast('会话即将过期，请及时保存工作', 5000);
+                            }
+                        } else {
+                            timeDisplay.textContent = '--:--';
+                            if (window.location.pathname !== '/') {
+                                window.isRedirecting = true;
+                                window.location.href = '/';
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Session check error:', error);
+                }
+            }
+
+            // 启动会话检查
+            function startSessionCheck() {
+                // 先停止已存在的定时器
+                stopSessionCheck();
+
+                // 只在需要检查的页面启动定时器
+                if (shouldCheckSession()) {
+                    console.debug('Starting session check timer');
+                    sessionCheckTimer = setInterval(checkSessionStatus, CHECK_INTERVAL);
+                    // 立即执行一次检查
+                    checkSessionStatus();
+                } else {
+                    console.debug('Session check not needed for this page');
+                }
+            }
+
+            // 停止会话检查
+            function stopSessionCheck() {
+                if (sessionCheckTimer) {
+                    console.debug('Stopping session check timer');
+                    clearInterval(sessionCheckTimer);
+                    sessionCheckTimer = null;
+                }
+            }
+
+            // 处理页面可见性变化
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) {
+                    stopSessionCheck();
+                } else if (shouldCheckSession()) {
+                    startSessionCheck();
+                }
+            });
+
+            // 处理页面卸载
+            window.addEventListener('beforeunload', function () {
+                stopSessionCheck();
+            });
+
+
+
+            // 页面加载时启动检查
+            startSessionCheck();
+        });
+    </script>
+</body>
+
+</html>

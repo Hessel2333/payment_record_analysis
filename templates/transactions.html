@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}交易记录{% endblock %}
+
+{% block head %}
+<style>
+    /* 基础样式变量 */
+    /* 基础样式变量由 style.css 统一管理 */
+
+    /* 页面标题样式 */
+    .page-header {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        padding: 20px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background-color: var(--bg-color);
+        margin: -20px -20px 24px -20px;
+        border-bottom: 1px solid var(--border-color);
+        backdrop-filter: saturate(180%) blur(20px);
+        background-color: rgba(245, 245, 247, 0.8);
+    }
+
+    .page-title {
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--text-color);
+        margin: 0;
+    }
+
+    .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 0 20px;
+    }
+
+    .table-header h3 {
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--text-color);
+    }
+
+    .table-filters {
+        display: flex;
+        gap: 12px;
+    }
+
+    .table-filters select,
+    .table-filters input {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 8px;
+        background: var(--hover-bg);
+        color: var(--text-color);
+        font-size: 13px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        -webkit-appearance: none;
+        appearance: none;
+        outline: none;
+    }
+
+    .table-filters select {
+        padding-right: 32px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8.825L1.175 4 2.238 2.938 6 6.7l3.763-3.763L10.825 4z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+    }
+
+    .table-filters input {
+        width: 200px;
+    }
+
+    .table-filters select:hover,
+    .table-filters input:hover {
+        background-color: var(--border-color);
+    }
+
+    .table-filters select:focus,
+    .table-filters input:focus {
+        background-color: white;
+        box-shadow: 0 0 0 2px var(--primary-color);
+    }
+
+    .table-container {
+        overflow-x: auto;
+        border-radius: 12px;
+        background: white;
+    }
+
+    #transactionTable {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    #transactionTable th,
+    #transactionTable td {
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+        white-space: nowrap;
+        /* 防止换行导致行高过大 */
+    }
+
+    /* 限制商品说明列宽 */
+    #transactionTable td:nth-child(2) {
+        max-width: 240px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* 限制交易对方列宽 */
+    #transactionTable td:nth-child(3) {
+        max-width: 180px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #transactionTable th {
+        background: var(--bg-color);
+        color: var(--secondary-text);
+        font-weight: normal;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    #transactionTable tbody tr {
+        transition: background-color 0.2s;
+    }
+
+    #transactionTable tbody tr:hover {
+        background: var(--hover-bg);
+    }
+
+    .amount {
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Mono', monospace;
+        text-align: right;
+    }
+
+    .amount.income {
+        color: #34C759;
+        /* Apple 绿色 */
+    }
+
+    .amount.expense {
+        color: #FF3B30;
+        /* Apple 红色 */
+    }
+
+    .status-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .status-tag.success {
+        background: #E4FBE6;
+        color: #34C759;
+    }
+
+    .status-tag.refund {
+        background: #FFE5E5;
+        color: #FF3B30;
+    }
+
+    .table-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 24px;
+        gap: 16px;
+    }
+
+    .table-pagination button {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 8px;
+        background: var(--hover-bg);
+        color: var(--text-color);
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .table-pagination button:not(:disabled):hover {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .table-pagination button:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    #pageInfo {
+        font-size: 13px;
+        color: var(--secondary-text);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">交易记录</h1>
+</div>
+
+<div class="card">
+    <div class="table-header">
+        <h3>交易明细</h3>
+        <div class="table-filters">
+            <select id="monthFilter">
+                <option value="">全部时间</option>
+            </select>
+            <select id="categoryFilter">
+                <option value="">全部分类</option>
+            </select>
+            <select id="typeFilter">
+                <option value="">全部类型</option>
+                <option value="收入">收入</option>
+                <option value="支出">支出</option>
+            </select>
+            <input type="text" id="searchInput" placeholder="搜索交易...">
+        </div>
+    </div>
+    <div class="table-container">
+        <table id="transactionTable" class="transaction-table">
+            <thead>
+                <tr>
+                    <th>交易时间</th>
+                    <th>商品说明</th>
+                    <th>交易对方</th>
+                    <th>分类</th>
+                    <th>收/支</th>
+                    <th>金额</th>
+                    <th>状态</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 数据将通过 JavaScript 动态加载 -->
+            </tbody>
+        </table>
+    </div>
+    <div class="table-pagination">
+        <button id="prevPage" disabled>上一页</button>
+        <span id="pageInfo">第 1 页</span>
+        <button id="nextPage">下一页</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        let currentPage = 1;
+        const perPage = 20;
+        let currentFilter;  // 将从 TransactionFilterManager 获取
+
+        // 加载筛选选项
+        function loadFilterOptions() {
+            // 加载月份选项
+            fetch('/api/available_dates')
+                .then(response => response.json())
+                .then(data => {
+                    const monthFilter = document.getElementById('monthFilter');
+                    monthFilter.innerHTML = '<option value="">全部时间</option>';
+
+                    if (data.months && data.months.length > 0) {
+                        data.months.forEach(month => {
+                            const option = document.createElement('option');
+                            option.value = month;
+                            option.textContent = month;
+                            monthFilter.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error loading months:', error));
+
+            // 加载分类选项
+            fetch('/api/categories')
+                .then(response => response.json())
+                .then(data => {
+                    const categoryFilter = document.getElementById('categoryFilter');
+                    categoryFilter.innerHTML = '<option value="">全部分类</option>';
+
+                    if (data.success && data.categories) {
+                        data.categories.forEach(category => {
+                            const option = document.createElement('option');
+                            option.value = category;
+                            option.textContent = category;
+                            categoryFilter.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error loading categories:', error));
+        }
+
+        // 加载交易记录
+        function loadTransactions(page = 1) {
+            // 显示加载状态
+            globalLoader.show('加载交易记录...');
+
+            // 构建查询参数
+            // 解析月份筛选
+            const monthValue = document.getElementById('monthFilter').value;
+            let year = '', month = '';
+
+            if (monthValue) {
+                const parts = monthValue.split('-');
+                if (parts.length === 2) {
+                    year = parts[0];
+                    month = parts[1];
+                }
+            }
+
+            const params = new URLSearchParams({
+                page: page,
+                per_page: perPage,
+                year: year,
+                month: month,
+                category: document.getElementById('categoryFilter').value,
+                type: document.getElementById('typeFilter').value,
+                search: document.getElementById('searchInput').value
+            });
+
+            // 添加金额筛选参数
+            if (currentFilter === 'large') {
+                params.append('min_amount', '1000');
+            } else if (currentFilter === 'small') {
+                params.append('max_amount', '1000');
+            }
+
+            fetchWithRetry(`/api/transactions?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showError(data.error);
+                        return;
+                    }
+
+                    // 更新表格内容
+                    const tbody = document.querySelector('#transactionTable tbody');
+                    tbody.innerHTML = data.transactions.map(t => `
+                    <tr>
+                        <td>${t.time}</td>
+                        <td title="${t.description}">${t.description}</td>
+                        <td title="${t.counterparty || ''}">${t.counterparty || '-'}</td>
+                        <td>${t.category}</td>
+                        <td>${t.type}</td>
+                        <td class="amount ${t.type === '收入' ? 'income' : 'expense'}">
+                            ${t.amount.toFixed(2)}
+                        </td>
+                        <td>
+                            <span class="status-tag ${t.status === '交易成功' ? 'success' : 'refund'}">
+                                ${t.status}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+
+                    // 更新分页信息
+                    updatePagination(data.pagination);
+                })
+                .catch(error => {
+                    showError('加载数据失败，请重试');
+                    console.error('Error:', error);
+                })
+                .finally(() => {
+                    globalLoader.hide();
+                });
+        }
+
+        // 更新分页控件
+        function updatePagination(pagination) {
+            const { current_page, total_pages, total_records } = pagination;
+            currentPage = current_page;
+
+            // 更新页码信息
+            document.getElementById('pageInfo').textContent =
+                `第 ${current_page} 页 / 共 ${total_pages} 页 (${total_records} 条记录)`;
+
+            // 更新按钮状态
+            document.getElementById('prevPage').disabled = current_page <= 1;
+            document.getElementById('nextPage').disabled = current_page >= total_pages;
+        }
+
+        // 绑定分页按钮事件
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 1) {
+                loadTransactions(currentPage - 1);
+            }
+        });
+
+        document.getElementById('nextPage').addEventListener('click', () => {
+            loadTransactions(currentPage + 1);
+        });
+
+        // 绑定筛选器事件
+        document.querySelectorAll('.table-filters select, .table-filters input').forEach(element => {
+            element.addEventListener('change', () => loadTransactions(1));
+        });
+
+        document.getElementById('searchInput').addEventListener('input', debounce(() => loadTransactions(1), 500));
+
+        // 防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // 绑定筛选按钮事件 - 删除，由 TransactionFilterManager 处理
+
+        // 初始化过滤器并加载数据
+        currentFilter = TransactionFilterManager.init((filterType) => {
+            currentFilter = filterType;
+            loadTransactions(1);
+        });
+
+        // 初始加载
+        loadFilterOptions();
+        loadTransactions();
+    });
+</script>
+{% endblock %}

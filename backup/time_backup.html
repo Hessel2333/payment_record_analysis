@@ -1,0 +1,948 @@
+{% extends "base.html" %}
+
+{% block title %}时间分析{% endblock %}
+
+{% block head %}
+<style>
+/* 基础样式变量 */
+:root {
+    --primary-color: #0066FF;      /* Apple 蓝色 */
+    --success-color: #34C759;      /* Apple 绿色 */
+    --danger-color: #FF3B30;       /* Apple 红色 */
+    --warning-color: #FF9500;      /* Apple 橙色 */
+    --secondary-text: #8E8E93;     /* Apple 次要文本 */
+    --border-color: #E5E5EA;       /* Apple 边框色 */
+    --card-bg: #FFFFFF;
+    --hover-bg: #F2F2F7;          /* Apple 系统悬停色 */
+}
+
+/* 页面布局样式 */
+.page-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 0 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: var(--bg-color);
+    margin: -20px -20px 24px -20px;
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+    backdrop-filter: saturate(180%) blur(20px);
+    background-color: rgba(245, 245, 247, 0.8);
+}
+
+.page-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0;
+}
+
+/* 图表卡片样式 */
+.chart-grid {
+    display: grid;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.chart-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.chart-header {
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chart-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-color);
+    letter-spacing: -0.01em;
+    font-family: var(--font-family-text);
+}
+
+.chart-controls {
+    display: flex;
+    gap: 12px;
+}
+
+.chart-control-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--secondary-text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chart-control-btn:hover {
+    background: var(--hover-bg);
+}
+
+.chart-control-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.chart-container {
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+/* 热力图样式优化 */
+.calendar-heatmap {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* 图表提示框样式 */
+.tooltip {
+    background: var(--card-bg) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    padding: 8px 12px !important;
+    font-family: var(--font-family-text) !important;
+    font-size: 13px !important;
+    border: none !important;
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+    .chart-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .chart-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    
+    .chart-controls {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+/* 为不同图表设置合适的高度 */
+.chart-container {
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+/* 热力图容器 */
+#calendarHeatmap {
+    height: 280px !important;
+}
+
+/* 日内时段分布图表 */
+#hourlyChart {
+    height: 400px !important;
+}
+
+/* 工作日/周末分布图表 */
+#weekdayChart {
+    height: 800px !important;
+}
+
+/* 年份切换器样式 */
+.year-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    grid-column: 2;
+}
+
+.year-display {
+    font-family: var(--font-family-display);
+    font-size: 24px;  /* 增大字体大小 */
+    font-weight: 600;
+    color: var(--text-color);
+    min-width: 140px;  /* 增加最小宽度 */
+    text-align: center;
+    letter-spacing: -0.025em;
+}
+
+.year-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;     /* 增大按钮尺寸 */
+    height: 36px;    /* 增大按钮尺寸 */
+    border: none;
+    border-radius: 50%;
+    background: var(--card-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.year-button:hover:not(:disabled) {
+    background: var(--hover-bg);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.year-button:active {
+    background: var(--border-color);
+    transform: scale(0.96);
+}
+
+.year-button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.year-button i {
+    font-size: 16px;  /* 增大箭头图标 */
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">时间分析</h1>
+    <div class="year-controls">
+        <button id="prevYear" class="year-button">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <span id="yearDisplay" class="year-display">2024年</span>
+        <button id="nextYear" class="year-button">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-header">
+            <h2 class="chart-title">每日消费热力图</h2>
+            <div class="chart-controls">
+                <button id="expenseBtn" class="chart-control-btn active">支出金额</button>
+                <button id="incomeBtn" class="chart-control-btn">收入金额</button>
+                <button id="transactionBtn" class="chart-control-btn">交易笔数</button>
+            </div>
+        </div>
+        <div class="chart-container" id="calendarHeatmap"></div>
+    </div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-header">
+            <h2 class="chart-title">日内时段分布</h2>
+        </div>
+        <div class="chart-container" id="hourlyChart"></div>
+    </div>
+</div>
+
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-header">
+            <h2 class="chart-title">工作日/周末分布</h2>
+        </div>
+        <div class="chart-container" id="weekdayChart"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 添加 formatMoney 函数
+function formatMoney(amount) {
+    return new Intl.NumberFormat('zh-CN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(amount);
+}
+
+// 添加 showTransactionModal 函数
+function showTransactionModal(title, transactions) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>${title}</h3>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <table class="transaction-table">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>商品说明</th>
+                            <th>交易对方</th>
+                            <th>分类</th>
+                            <th>收/支</th>
+                            <th>金额</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${transactions.map(t => `
+                            <tr>
+                                <td>${t.time}</td>
+                                <td>${t.description}</td>
+                                <td>${t.counterparty || '-'}</td>
+                                <td>${t.category}</td>
+                                <td>${t.type}</td>
+                                <td class="amount ${t.type === '收入' ? 'income' : 'expense'}">
+                                    ${formatMoney(t.amount)}
+                                </td>
+                                <td>
+                                    <span class="status-tag ${t.status === '交易成功' ? 'success' : 'refund'}">
+                                        ${t.status}
+                                    </span>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    // 添加模态框样式
+    const style = document.createElement('style');
+    style.textContent = `
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 1200px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .modal-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--secondary-text);
+        }
+        
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            max-height: calc(90vh - 70px);
+        }
+        
+        .transaction-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .transaction-table th,
+        .transaction-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .transaction-table th {
+            background: var(--bg-color);
+            font-weight: 500;
+            color: var(--secondary-text);
+        }
+        
+        .amount {
+            font-family: var(--font-family-mono);
+            text-align: right;
+        }
+        
+        .amount.income {
+            color: var(--success-color);
+        }
+        
+        .amount.expense {
+            color: var(--danger-color);
+        }
+        
+        .status-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .status-tag.success {
+            background: rgba(52, 199, 89, 0.1);
+            color: var(--success-color);
+        }
+        
+        .status-tag.refund {
+            background: rgba(255, 59, 48, 0.1);
+            color: var(--danger-color);
+        }
+    `;
+
+    document.head.appendChild(style);
+    document.body.appendChild(modal);
+
+    // 关闭按钮事件
+    modal.querySelector('.close-btn').addEventListener('click', () => {
+        modal.remove();
+        style.remove();
+    });
+
+    // 点击背景关闭
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+            style.remove();
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化图表实例
+    const heatmapChart = echarts.init(document.getElementById('calendarHeatmap'));
+    const hourlyChart = echarts.init(document.getElementById('hourlyChart'));
+    const weekdayChart = echarts.init(document.getElementById('weekdayChart'));
+    
+    let currentData = 'expense';
+    let heatmapData = {
+        expense: [],
+        income: [],
+        transaction: [],
+        expense_quantiles: [],
+        income_quantiles: []
+    };
+
+    let currentFilter = 'all';  // 添加当前筛选状态
+    let currentYear;
+    let availableYears = [];
+    
+    // 获取可用年份
+    function loadAvailableYears() {
+        fetch('/api/available_years')
+            .then(response => response.json())
+            .then(data => {
+                availableYears = data.years.sort((a, b) => b - a); // 降序排列
+                currentYear = availableYears[0]; // 默认选择最新的年份
+                updateYearDisplay();
+                updateYearButtons();
+                loadData(currentYear);
+            });
+    }
+    
+    // 更新年份显示
+    function updateYearDisplay() {
+        document.getElementById('yearDisplay').textContent = `${currentYear}年`;
+    }
+    
+    // 更新年份切换按钮状态
+    function updateYearButtons() {
+        const currentIndex = availableYears.indexOf(currentYear);
+        document.getElementById('prevYear').disabled = currentIndex >= availableYears.length - 1;
+        document.getElementById('nextYear').disabled = currentIndex <= 0;
+    }
+    
+    // 绑定年份切换按钮事件
+    document.getElementById('prevYear').addEventListener('click', function() {
+        const currentIndex = availableYears.indexOf(currentYear);
+        if (currentIndex < availableYears.length - 1) {
+            currentYear = availableYears[currentIndex + 1];
+            updateYearDisplay();
+            updateYearButtons();
+            loadData(currentYear);
+        }
+    });
+    
+    document.getElementById('nextYear').addEventListener('click', function() {
+        const currentIndex = availableYears.indexOf(currentYear);
+        if (currentIndex > 0) {
+            currentYear = availableYears[currentIndex - 1];
+            updateYearDisplay();
+            updateYearButtons();
+            loadData(currentYear);
+        }
+    });
+
+    // 加载热力图数据
+    function loadHeatmapData() {
+        fetch('/api/daily_data')
+            .then(response => response.json())
+            .then(data => {
+                heatmapData = {
+                    expense: data.expense,
+                    income: data.income,
+                    transaction: data.transaction,
+                    expense_quantiles: data.expense_quantiles,
+                    income_quantiles: data.income_quantiles
+                };
+                updateHeatmap(currentData);
+            });
+    }
+
+    // 更新热力图
+    function updateHeatmap(dataType) {
+        currentData = dataType;
+        const data = heatmapData[dataType];
+        
+        // 更新按钮状态
+        document.querySelectorAll('.chart-control-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.getElementById(dataType + 'Btn').classList.add('active');
+
+        // 获取当前年份的日期范围
+        const startDate = `${currentYear}/01/01`;
+        const endDate = `${currentYear}/12/31`;
+
+        // 设置热力图配置
+        const option = {
+            title: {
+                top: 30,
+                left: 'center',
+                text: dataType === 'expense' ? '日支出金额分布' :
+                      dataType === 'income' ? '日收入金额分布' : '日交易笔数分布'
+            },
+            tooltip: {
+                position: 'top',
+                formatter: function (params) {
+                    const value = params.data[1];
+                    if (dataType === 'transaction') {
+                        return `${params.data[0]}<br>${value} 笔交易`;
+                    } else {
+                        return `${params.data[0]}<br>${value.toFixed(2)} 元`;
+                    }
+                }
+            },
+            visualMap: {
+                min: 0,
+                max: dataType === 'transaction' ? 
+                    Math.max(...data.map(item => item[1])) :
+                    (dataType === 'expense' ? 
+                        Math.max(...heatmapData.expense_quantiles) : 
+                        Math.max(...heatmapData.income_quantiles)),
+                calculable: true,
+                orient: 'horizontal',
+                left: 'center',
+                top: 65,
+                precision: 0,
+                textStyle: {
+                    color: '#333'
+                },
+                inRange: {
+                    color: ['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b', '#196127']
+                }
+            },
+            calendar: {
+                top: 120,
+                left: 30,
+                right: 30,
+                cellSize: ['auto', 20],
+                range: [startDate, endDate],
+                itemStyle: {
+                    borderWidth: 0.5
+                },
+                yearLabel: { show: false },
+                dayLabel: {
+                    firstDay: 1,
+                    nameMap: ['日', '一', '二', '三', '四', '五', '六']
+                },
+                monthLabel: {
+                    nameMap: 'cn'
+                }
+            },
+            series: {
+                type: 'heatmap',
+                coordinateSystem: 'calendar',
+                data: data,
+                label: {
+                    show: false
+                }
+            }
+        };
+
+        heatmapChart.setOption(option);
+    }
+
+    // 加载时间分析数据
+    function loadData(year) {
+        // 首先加载热力图数据
+        fetch(`/api/daily_data?year=${year}&filter=${currentFilter}`)
+            .then(response => response.json())
+            .then(data => {
+                heatmapData = {
+                    expense: data.expense,
+                    income: data.income,
+                    transaction: data.transaction,
+                    expense_quantiles: data.expense_quantiles,
+                    income_quantiles: data.income_quantiles
+                };
+                updateHeatmap(currentData);
+            })
+            .catch(error => {
+                console.error('Error loading heatmap data:', error);
+            });
+
+        // 然后加载时间分析数据
+        fetch(`/api/time_analysis?year=${year}&filter=${currentFilter}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('收到的原始数据:', data);
+                
+                if (!data || !data.weekday_weekend) {
+                    console.error('Invalid data format received');
+                    return;
+                }
+                
+                // 过滤掉总金额为0的分类
+                const filteredCategories = Object.entries(data.weekday_weekend)
+                    .filter(([_, values]) => values.weekday.amount > 0 || values.weekend.amount > 0)
+                    .reduce((acc, [key, value]) => {
+                        acc[key] = value;
+                        return acc;
+                    }, {});
+                    
+                console.log('过滤后的分类数据:', filteredCategories);
+                
+                const weekdayData = Object.entries(filteredCategories).map(([cat, values]) => {
+                    console.log(`处理工作日数据 - 分类 ${cat}:`, values.weekday);
+                    return {
+                        value: values.weekday.percentage,
+                        itemStyle: {
+                            borderRadius: [0, 0, 0, 0]
+                        }
+                    };
+                });
+                
+                const weekendData = Object.entries(filteredCategories).map(([cat, values]) => {
+                    console.log(`处理周末数据 - 分类 ${cat}:`, values.weekend);
+                    return {
+                        value: values.weekend.percentage,
+                        itemStyle: {
+                            borderRadius: [0, 0, 0, 0]
+                        }
+                    };
+                });
+                
+                console.log('最终工作日数据:', weekdayData);
+                console.log('最终周末数据:', weekendData);
+                
+                // 设置日内时段分布图表
+                hourlyChart.setOption({
+                    title: {
+                        text: '日内消费时段分布',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'cross'
+                        }
+                    },
+                    legend: {
+                        data: ['消费金额', '交易笔数'],
+                        top: 30
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '3%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: Array.from({length: 24}, (_, i) => `${i}时`),
+                        axisLabel: {
+                            interval: 0
+                        }
+                    },
+                    yAxis: [
+                        {
+                            type: 'value',
+                            name: '金额（元）'
+                        },
+                        {
+                            type: 'value',
+                            name: '笔数',
+                            position: 'right'
+                        }
+                    ],
+                    series: [
+                        {
+                            name: '消费金额',
+                            type: 'bar',
+                            data: data.hourly.amounts,
+                            itemStyle: {
+                                color: '#1890ff'
+                            }
+                        },
+                        {
+                            name: '交易笔数',
+                            type: 'line',
+                            yAxisIndex: 1,
+                            data: data.hourly.counts,
+                            itemStyle: {
+                                color: '#722ed1'
+                            }
+                        }
+                    ]
+                });
+
+                // 设置工作日/周末分布图表
+                weekdayChart.setOption({
+                    title: {
+                        text: '工作日/周末消费分布',
+                        left: 'center',
+                        top: 10,
+                        textStyle: {
+                            fontSize: 16,
+                            fontWeight: 'normal'
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    },
+                    legend: {
+                        data: ['工作日', '周末'],
+                        top: 35,
+                        textStyle: {
+                            fontSize: 13
+                        }
+                    },
+                    grid: {
+                        left: '15%',        // 减小左边距
+                        right: '15%',       // 增加右边距使图表居中
+                        top: '15%',         
+                        bottom: '3%',       
+                        height: '80%',      
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'value',
+                        name: '占比（%）',
+                        nameTextStyle: {
+                            fontSize: 13
+                        },
+                        axisLabel: {
+                            formatter: '{value}%',
+                            fontSize: 12
+                        },
+                        max: 100           // 固定最大值为100%
+                    },
+                    yAxis: {
+                        type: 'category',
+                        data: Object.keys(filteredCategories),
+                        inverse: true,
+                        axisLabel: {
+                            fontSize: 13,
+                            margin: 16,     // 减小标签边距
+                            color: '#333',
+                            width: 90,      // 减小标签宽度
+                            overflow: 'break',
+                            lineHeight: 20,
+                            align: 'right'  // 右对齐标签
+                        },
+                        axisTick: {
+                            show: false
+                        },
+                        axisLine: {
+                            show: false
+                        }
+                    },
+                    series: [
+                        {
+                            name: '工作日',
+                            type: 'bar',
+                            stack: 'total',
+                            barWidth: 16,   // 减小柱子宽度
+                            barGap: '100%',
+                            barCategoryGap: '40%', // 调整类目间距
+                            itemStyle: {
+                                color: '#5470c6'
+                            },
+                            label: {
+                                show: true,
+                                position: 'inside',
+                                formatter: function(params) {
+                                    return params.value > 0 ? params.value + '%' : '';
+                                },
+                                fontSize: 12,
+                                color: '#fff'
+                            },
+                            data: weekdayData
+                        },
+                        {
+                            name: '周末',
+                            type: 'bar',
+                            stack: 'total',
+                            barWidth: 16,   // 减小柱子宽度
+                            barGap: '100%',
+                            barCategoryGap: '40%', // 调整类目间距
+                            itemStyle: {
+                                color: '#91cc75'
+                            },
+                            label: {
+                                show: true,
+                                position: 'inside',
+                                formatter: function(params) {
+                                    return params.value > 0 ? params.value + '%' : '';
+                                },
+                                fontSize: 12,
+                                color: '#fff'
+                            },
+                            data: weekendData
+                        }
+                    ]
+                });
+            })
+            .catch(error => {
+                console.error('Error loading time analysis data:', error);
+            });
+    }
+
+    // 添加热力图切换按钮事件
+    document.getElementById('expenseBtn').addEventListener('click', () => updateHeatmap('expense'));
+    document.getElementById('incomeBtn').addEventListener('click', () => updateHeatmap('income'));
+    document.getElementById('transactionBtn').addEventListener('click', () => updateHeatmap('transaction'));
+
+    // 绑定金额筛选按钮事件
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // 更新按钮状态
+            document.querySelectorAll('.filter-btn').forEach(b => 
+                b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // 更新当前筛选状态
+            currentFilter = this.dataset.filter;
+            
+            // 重新加载所有数据
+            loadData(currentYear);
+        });
+    });
+
+    // 修改热力图点击事件
+    heatmapChart.on('click', function(params) {
+        if (params.componentType === 'series') {
+            const date = params.data[0];  // 获取点击的日期
+            // 将日期格式从 YYYY/MM/DD 转换为 YYYY-MM-DD
+            const formattedDate = date.replace(/\//g, '-');
+            const title = `${formattedDate} 交易明细`;
+            
+            // 构建查询参数
+            const queryParams = new URLSearchParams({
+                date: formattedDate
+            });
+            
+            // 添加金额筛选参数
+            if (currentFilter === 'large') {
+                queryParams.append('min_amount', '1000');
+            } else if (currentFilter === 'small') {
+                queryParams.append('max_amount', '1000');
+            }
+            
+            fetch(`/api/transactions?${queryParams}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.transactions) {
+                        showTransactionModal(title, data.transactions);
+                    } else {
+                        showToast('该日期没有交易记录');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching transaction data:', error);
+                    showToast('获取交易数据失败，请重试');
+                });
+        }
+    });
+
+    // 在设置日内时段分布图表的部分添加点击事件
+    hourlyChart.on('click', function(params) {
+        if (params.componentType === 'series' && params.seriesName === '消费金额') {
+            const hour = params.dataIndex;  // 获取点击的小时
+            const title = `${currentYear}年 ${hour}时消费明细`;
+            
+            // 构建查询参数
+            const queryParams = new URLSearchParams({
+                year: currentYear,
+                hour: hour
+            });
+            
+            // 添加金额筛选参数
+            if (currentFilter === 'large') {
+                queryParams.append('min_amount', '1000');
+            } else if (currentFilter === 'small') {
+                queryParams.append('max_amount', '1000');
+            }
+            
+            // 获取该时段的交易记录
+            fetch(`/api/transactions?${queryParams}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.transactions && data.transactions.length > 0) {
+                        showTransactionModal(title, data.transactions);
+                    } else {
+                        showToast('该时段没有交易记录');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching transaction data:', error);
+                    showToast('获取交易数据失败，请重试');
+                });
+        }
+    });
+
+    // 响应窗口调整
+    window.addEventListener('resize', function() {
+        heatmapChart.resize();
+        hourlyChart.resize();
+        weekdayChart.resize();
+    });
+
+    // 初始加载数据
+    loadAvailableYears();
+});
+</script>
+{% endblock %} 

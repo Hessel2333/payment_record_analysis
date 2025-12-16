@@ -1,0 +1,1000 @@
+{% extends "base.html" %}
+
+{% block title %}消费分析{% endblock %}
+
+{% block head %}
+<style>
+/* 基础样式变量 */
+:root {
+    --primary-color: #0066FF;
+    --success-color: #34C759;
+    --danger-color: #FF3B30;
+    --warning-color: #FF9500;
+    --secondary-text: #8E8E93;
+    --border-color: #E5E5EA;
+    --card-bg: #FFFFFF;
+    --hover-bg: #F2F2F7;
+}
+
+.analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    padding: 0 0 24px 0;
+}
+
+.analysis-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    height: 480px;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-header {
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-color);
+    font-family: -apple-system, "SF Pro Text", "SF Pro", sans-serif;
+    letter-spacing: -0.01em;
+}
+
+.card-content {
+    flex: 1;
+    /* 只在需要的卡片上启用滚动 */
+    overflow: visible;  /* 默认不显示滚动条 */
+}
+
+/* 只为需要滚动的卡片单独设置 overflow */
+.merchant-list-card .card-content {
+    overflow: auto;  /* 商家列表需要滚动 */
+}
+
+.profile-card .card-content {
+    overflow: auto;  /* 消费画像需要滚动 */
+}
+
+/* 移除场景分析卡片的滚动 */
+.scenario-card .card-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 0;
+    margin-bottom: 12px;
+}
+
+.tag {
+    padding: 4px 12px;
+    border-radius: 14px;
+    font-size: 13px;
+    color: white;
+    background: var(--primary-color);
+    font-weight: 500;
+}
+
+.merchant-list {
+    max-height: none;
+    overflow-y: visible;
+    padding: 8px 0;
+}
+
+.merchant-item {
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--hover-bg);
+    transition: all 0.2s ease;
+}
+
+.merchant-item:last-child {
+    margin-bottom: 0;
+}
+
+.merchant-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* 添加前三名强调样式 */
+.merchant-item.top-1 {
+    background: linear-gradient(to right, rgba(255, 149, 0, 0.1), rgba(255, 149, 0, 0.05));
+    border: 1px solid rgba(255, 149, 0, 0.2);
+}
+
+.merchant-item.top-2 {
+    background: linear-gradient(to right, rgba(88, 86, 214, 0.1), rgba(88, 86, 214, 0.05));
+    border: 1px solid rgba(88, 86, 214, 0.2);
+}
+
+.merchant-item.top-3 {
+    background: linear-gradient(to right, rgba(52, 199, 89, 0.1), rgba(52, 199, 89, 0.05));
+    border: 1px solid rgba(52, 199, 89, 0.2);
+}
+
+.merchant-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.merchant-rank {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.top-1 .merchant-rank {
+    background: var(--warning-color);
+    color: white;
+}
+
+.top-2 .merchant-rank {
+    background: #5856D6;
+    color: white;
+}
+
+.top-3 .merchant-rank {
+    background: var(--success-color);
+    color: white;
+}
+
+.merchant-details {
+    flex: 1;
+}
+
+.merchant-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 4px;
+}
+
+.merchant-meta {
+    font-size: 13px;
+    color: var(--secondary-text);
+    margin-top: 4px;
+}
+
+.merchant-stats {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+}
+
+.stat-group {
+    text-align: right;
+}
+
+.stat-group .label {
+    font-size: 12px;
+    color: var(--secondary-text);
+    margin-bottom: 2px;
+}
+
+.stat-group .value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-color);
+    font-family: var(--font-family-mono);
+}
+
+.top-1 .stat-group .value {
+    color: var(--warning-color);
+}
+
+.top-2 .stat-group .value {
+    color: #5856D6;
+}
+
+.top-3 .stat-group .value {
+    color: var(--success-color);
+}
+
+.prediction-chart {
+    height: 400px;
+}
+
+.habit-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    padding: 24px;
+    background: var(--card-bg);  /* 确保背景为白色 */
+}
+
+.stat-item {
+    text-align: center;
+    padding: 24px;
+    background: var(--hover-bg);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    border: 1px solid var(--border-color);
+    position: relative;
+}
+
+/* 移除之前的渐变效果 */
+.stat-item::before {
+    display: none;  /* 移除渐变背景 */
+}
+
+/* 修改悬停效果，与商家列表保持一致 */
+.stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border-color: var(--border-color);  /* 保持边框颜色不变 */
+    background: var(--hover-bg);  /* 保持背景色不变 */
+}
+
+/* 调整数值显示 */
+.stat-value {
+    font-family: -apple-system, "SF Pro Display", "SF Pro", sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 10px;
+    letter-spacing: -0.02em;
+}
+
+.stat-label {
+    font-family: -apple-system, "SF Pro Text", "SF Pro", sans-serif;
+    font-size: 15px;
+    color: var(--secondary-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    position: relative;  /* 确保标签在渐变上层 */
+    font-weight: 500;
+}
+
+.chart-container {
+    flex: 1;
+    min-height: 360px;
+    display: flex;
+    align-items: center;
+}
+
+/* 添加消费画像卡片的样式 */
+.profile-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.profile-details {
+    font-size: 14px;
+    color: var(--text-color);
+    line-height: 1.4;
+}
+
+.profile-feature {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 12px;
+    background: var(--hover-bg);
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
+}
+
+.profile-feature:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.feature-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--primary-color);
+    color: white;
+    flex-shrink: 0;
+}
+
+.feature-icon i {
+    font-size: 13px;
+}
+
+.feature-content {
+    flex: 1;
+}
+
+.feature-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text-color);
+}
+
+.feature-description {
+    color: #666;
+    font-size: 13px;
+    line-height: 1.4;
+    letter-spacing: 0.2px;
+}
+
+.highlight {
+    color: #0066FF;
+    font-weight: 600;
+}
+
+.percentage {
+    color: #FF8000;
+    font-weight: 600;
+}
+
+.amount {
+    color: #2FB344;
+    font-weight: 600;
+}
+
+/* 自定义滚动条样式 */
+.card-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.card-content::-webkit-scrollbar-track {
+    background: var(--hover-bg);
+    border-radius: 2px;
+}
+
+.card-content::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+}
+
+/* 调整图表标题和图例位置 */
+.echarts-title {
+    margin-bottom: 16px;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* 修改页面标题区域样式 */
+.page-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: var(--bg-color);
+    margin: -20px -20px 24px -20px;
+    border-bottom: 1px solid var(--border-color);
+    backdrop-filter: saturate(180%) blur(20px);
+    background-color: rgba(245, 245, 247, 0.8);
+}
+
+.page-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0;
+    font-family: -apple-system, "SF Pro Display", "SF Pro", sans-serif;
+    letter-spacing: -0.02em;
+}
+
+.year-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    grid-column: 2;
+}
+
+.year-display {
+    font-family: var(--font-family-display);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-color);
+    min-width: 140px;
+    text-align: center;
+    letter-spacing: -0.025em;
+}
+
+.year-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: var(--card-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.year-button:hover:not(:disabled) {
+    background: var(--hover-bg);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.year-button:active {
+    background: var(--border-color);
+    transform: scale(0.96);
+}
+
+.year-button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.year-button i {
+    font-size: 16px;
+}
+
+.scenario-tabs {
+    margin-bottom: 20px;
+}
+
+.tab-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--secondary-text);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.tab-btn:hover {
+    background: var(--hover-bg);
+}
+
+.tab-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* 修改帮助图标样式，使其更加subtle */
+.help-icon {
+    margin-left: 6px;
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+
+.help-icon i {
+    font-size: 12px;
+    color: var(--secondary-text);
+}
+
+.help-icon:hover {
+    opacity: 1;
+    background: transparent;  /* 移除背景色变化 */
+}
+
+.help-icon:hover i {
+    color: var(--primary-color);  /* 悬停时改变图标颜色 */
+}
+
+/* 修改自定义提示框样式 */
+.custom-tooltip {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(20px);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: white;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    line-height: 1.4;
+    pointer-events: none;
+}
+
+/* 修改提示框箭头方向 */
+.custom-tooltip::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;  /* 改为从底部改为顶部 */
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent rgba(0, 0, 0, 0.8) transparent;  /* 修改边框方向 */
+}
+
+/* 修改悬停效果的动画方向 */
+.help-icon:hover .custom-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(2px);  /* 改为向下移动 */
+}
+
+/* 移除所有可能影响提示框显示的 overflow 限制 */
+.card-content,
+.habit-stats,
+.analysis-card {
+    overflow: visible;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">消费洞察</h1>
+    <div class="year-controls">
+        <button id="prevYear" class="year-button">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <span id="currentYear" class="year-display">2024年</span>
+        <button id="nextYear" class="year-button">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+    <div></div>
+</div>
+
+<div class="analysis-grid">
+    <!-- 智能标签 -->
+    <div class="analysis-card">
+        <div class="card-header">
+            <h2 class="card-title">消费画像</h2>
+        </div>
+        <div class="card-content">
+            <div class="profile-content">
+                <div class="tag-cloud" id="tagCloud">
+                    <!-- 标签将通过 JavaScript 动态添加 -->
+                </div>
+                <div class="profile-details" id="profileDetails">
+                    <!-- 消费特征将通过 JavaScript 动态添加 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商家分析 -->
+    <div class="analysis-card merchant-list-card">
+        <div class="card-header">
+            <h2 class="card-title">最常光顾</h2>
+        </div>
+        <div class="card-content">
+            <div class="merchant-list" id="merchantList">
+                <!-- 商家列表将通过 JavaScript 动态添加 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 消费场景分析 -->
+    <div class="analysis-card scenario-card">
+        <div class="card-header">
+            <h2 class="card-title">消费场景</h2>
+        </div>
+        <div class="card-content">
+            <div class="scenario-tabs">
+                <button class="tab-btn active" data-type="channel">消费渠道</button>
+                <button class="tab-btn" data-type="time">时段分布</button>
+                <button class="tab-btn" data-type="amount">金额层级</button>
+                <button class="tab-btn" data-type="payment">支付方式</button>
+            </div>
+            <div id="scenarioChart" class="chart-container"></div>
+        </div>
+    </div>
+
+    <!-- 消费习惯分析 -->
+    <div class="analysis-card">
+        <div class="card-header">
+            <h2 class="card-title">消费习惯</h2>
+        </div>
+        <div class="card-content">
+            <div class="habit-stats" id="habitStats">
+                <!-- 习惯统计将通过 JavaScript 动态添加 -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 修改全局变量声明
+let scenarioChart;  // 只保留场景分析图表
+
+// 添加金额格式化函数
+function formatMoney(amount) {
+    return new Intl.NumberFormat('zh-CN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(amount);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 只初始化场景分析图表
+    scenarioChart = echarts.init(document.getElementById('scenarioChart'));
+    
+    let currentYear = new Date().getFullYear();
+    let availableYears = [];
+    
+    // 加载可用年份
+    function loadAvailableYears() {
+        fetch('/api/available_years')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    availableYears = data.years;
+                    currentYear = availableYears[0];  // 默认选择最新的年份
+                    updateYearDisplay();
+                    loadAnalysisData();
+                }
+            });
+    }
+    
+    // 更新年份显示
+    function updateYearDisplay() {
+        document.getElementById('currentYear').textContent = `${currentYear}年`;
+        const currentIndex = availableYears.indexOf(currentYear);
+        document.getElementById('prevYear').disabled = currentIndex >= availableYears.length - 1;
+        document.getElementById('nextYear').disabled = currentIndex <= 0;
+    }
+    
+    // 修改加载分析数据函数，添加年份参数
+    function loadAnalysisData() {
+        fetch(`/api/analysis?year=${currentYear}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateAnalysis(data.data);
+                } else {
+                    showToast('加载分析数据失败：' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('加载数据失败，请重试');
+            });
+    }
+    
+    // 修改 updateAnalysis 函数
+    function updateAnalysis(data) {
+        // 更新智能标签
+        updateTags(data.tags);
+        
+        // 更新商家分析
+        updateMerchants(data.merchant_analysis);
+        
+        // 更新消费场景图表，传入支付方式数据
+        updateScenarioChart(data.scenario_analysis, data.payment_analysis);
+        
+        // 更新消费习惯统计
+        updateHabitStats(data.habit_analysis);
+    }
+    
+    // 更新智能标签和消费特征
+    function updateTags(data) {
+        // 更新标签云
+        const tagCloud = document.getElementById('tagCloud');
+        tagCloud.innerHTML = data.tags.map(tag => 
+            `<span class="tag">${tag}</span>`
+        ).join('');
+        
+        // 更新消费特征详情，添加高亮
+        const profileDetails = document.getElementById('profileDetails');
+        profileDetails.innerHTML = `
+            <div class="profile-feature">
+                <div class="feature-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="feature-content">
+                    <div class="feature-title">消费时间</div>
+                    <div class="feature-description">${formatTimePattern(data.time_pattern)}</div>
+                </div>
+            </div>
+            <div class="profile-feature">
+                <div class="feature-icon">
+                    <i class="fas fa-shopping-bag"></i>
+                </div>
+                <div class="feature-content">
+                    <div class="feature-title">消费偏好</div>
+                    <div class="feature-description">${formatPreference(data.spending_preference)}</div>
+                </div>
+            </div>
+            <div class="profile-feature">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="feature-content">
+                    <div class="feature-title">消费规律</div>
+                    <div class="feature-description">${formatPattern(data.spending_pattern)}</div>
+                </div>
+            </div>
+            <div class="profile-feature">
+                <div class="feature-icon">
+                    <i class="fas fa-wallet"></i>
+                </div>
+                <div class="feature-content">
+                    <div class="feature-title">消费能力</div>
+                    <div class="feature-description">${formatPower(data.spending_power)}</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 修改格式化函数，更精确地控制强调部分
+    function formatTimePattern(text) {
+        // 只强调具体时间段
+        return text.replace(/(夜间|早起|日间)/g, '<span class="highlight">$1</span>');
+    }
+
+    function formatPreference(text) {
+        // 分别强调分类名称和百分比
+        return text.replace(/最常消费的品类是/, '')  // 移除前缀文字
+            .replace(/([^，。]+?)(\([0-9.]+%\))/g, '<span class="highlight">$1</span><span class="percentage">$2</span>');
+    }
+
+    function formatPattern(text) {
+        // 只强调关键描述词
+        return text.replace(/(非常有规律|理性|较为均衡|比较随性)/g, '<span class="highlight">$1</span>');
+    }
+
+    function formatPower(text) {
+        // 分别强调金额和消费群体类型
+        return text.replace(
+            /日均消费([0-9]+)元/g, '日均消费<span class="amount">$1</span>元'
+        ).replace(
+            /，属于(高|中等|理性)消费人群/g, '，属于<span class="highlight">$1</span>消费人群'
+        );
+    }
+    
+    // 更新商家分析
+    function updateMerchants(data) {
+        const merchantList = document.getElementById('merchantList');
+        merchantList.innerHTML = data.frequent_merchants.map((merchant, index) => `
+            <div class="merchant-item ${index < 3 ? 'top-' + (index + 1) : ''}">
+                <div class="merchant-info">
+                    <div class="merchant-rank">${index + 1}</div>
+                    <div class="merchant-details">
+                        <div class="merchant-name">${merchant.name}</div>
+                        <div class="merchant-meta">上次消费: ${merchant.last_visit}</div>
+                    </div>
+                </div>
+                <div class="merchant-stats">
+                    <div class="stat-group">
+                        <div class="label">消费金额</div>
+                        <div class="value">${formatMoney(merchant.amount)}</div>
+                    </div>
+                    <div class="stat-group">
+                        <div class="label">消费次数</div>
+                        <div class="value">${merchant.count}次</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // 更新消费场景图表
+    function updateScenarioChart(data, paymentData) {
+        // 按类别分组数据
+        const groupedData = {
+            'channel': data.filter(item => item.category === '渠道'),
+            'time': data.filter(item => item.category === '时段'),
+            'amount': data.filter(item => item.category === '层级'),
+            'payment': paymentData.map(item => ({
+                name: item.name,
+                value: item.total_amount
+            }))
+        };
+        
+        // 获取当前选中的标签类型
+        const currentType = document.querySelector('.tab-btn.active')?.dataset.type || 'channel';
+        
+        // 渲染图表函数
+        function renderChart(type) {
+            const chartData = groupedData[type] || [];
+            
+            // 计算总金额用于百分比
+            const total = chartData.reduce((sum, item) => sum + (item.value || 0), 0);
+            
+            // 定义各类型的颜色方案
+            const colorSchemes = {
+                channel: ['#007AFF', '#5856D6'],  // 线上/线下
+                time: ['#FF9500', '#FF3B30', '#34C759', '#5856D6', '#007AFF', '#FF2D55'],  // 各时段
+                amount: ['#FF3B30', '#FF9500', '#34C759', '#007AFF'],  // 金额层级
+                payment: ['#007AFF', '#FF9500', '#34C759', '#5856D6', '#FF3B30', '#FF2D55', '#64D2FF']  // 支付方式
+            };
+            
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function(params) {
+                        const percentage = ((params.value / total) * 100).toFixed(1);
+                        return `${params.name}<br/>金额：${formatMoney(params.value)}元<br/>占比：${percentage}%`;
+                    }
+                },
+                series: [{
+                    name: '金额分布',
+                    type: 'pie',
+                    radius: ['25%', '60%'],
+                    center: ['50%', '50%'],
+                    avoidLabelOverlap: true,
+                    itemStyle: {
+                        borderRadius: 5,
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    },
+                    label: {
+                        show: true,
+                        position: 'outside',
+                        formatter: params => {
+                            const percentage = ((params.value / total) * 100).toFixed(1);
+                            return percentage > 1 ? `${params.name}\n${percentage}%` : '';
+                        },
+                        fontSize: 12,
+                        color: '#666',
+                        lineHeight: 16
+                    },
+                    labelLine: {
+                        show: params => {
+                            const percentage = ((params.value / total) * 100);
+                            return percentage > 1;
+                        },
+                        length: 8,
+                        length2: 8,
+                        smooth: true,
+                        maxSurfaceAngle: 80
+                    },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: 14,
+                            fontWeight: 'bold',
+                            formatter: params => {
+                                const percentage = ((params.value / total) * 100).toFixed(1);
+                                return `${params.name}\n${percentage}%`;
+                            }
+                        },
+                        scaleSize: 6
+                    },
+                    data: chartData.map((item, index) => ({
+                        name: item.name,
+                        value: item.value,
+                        itemStyle: {
+                            color: colorSchemes[type][index % colorSchemes[type].length]
+                        },
+                        label: {
+                            show: (item.value / total * 100) > 1
+                        },
+                        labelLine: {
+                            show: (item.value / total * 100) > 1
+                        }
+                    }))
+                }]
+            };
+            
+            scenarioChart.setOption(option, true);
+        }
+        
+        // 绑定标签页切换事件
+        if (!scenarioChart.tabsInitialized) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.tab-btn').forEach(b => 
+                        b.classList.remove('active'));
+                    this.classList.add('active');
+                    renderChart(this.dataset.type);
+                });
+            });
+            scenarioChart.tabsInitialized = true;
+        }
+        
+        // 渲染当前选中的类型
+        renderChart(currentType);
+    }
+    
+    // 更新消费习惯统计
+    function updateHabitStats(data) {
+        const habitStats = document.getElementById('habitStats');
+        habitStats.innerHTML = `
+            <div class="stat-item">
+                <div class="stat-value">${data.daily_avg.toFixed(2)}</div>
+                <div class="stat-label">日均消费(元)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${data.weekend_ratio}%</div>
+                <div class="stat-label">
+                    周末消费占比
+                    <span class="help-icon">
+                        <i class="fas fa-question-circle"></i>
+                        <span class="custom-tooltip">周六日的消费占总支出的比例</span>
+                    </span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${data.fixed_expenses}%</div>
+                <div class="stat-label">
+                    固定支出占比
+                    <span class="help-icon">
+                        <i class="fas fa-question-circle"></i>
+                        <span class="custom-tooltip">每月都有消费记录的商家的支出被视为固定支出</span>
+                    </span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${data.month_start_ratio}%</div>
+                <div class="stat-label">
+                    月初消费占比
+                    <span class="help-icon">
+                        <i class="fas fa-question-circle"></i>
+                        <span class="custom-tooltip">每月前5天的消费占比</span>
+                    </span>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 绑定年份切换按钮事件
+    document.getElementById('prevYear').addEventListener('click', function() {
+        const currentIndex = availableYears.indexOf(currentYear);
+        if (currentIndex < availableYears.length - 1) {
+            currentYear = availableYears[currentIndex + 1];
+            updateYearDisplay();
+            loadAnalysisData();
+        }
+    });
+    
+    document.getElementById('nextYear').addEventListener('click', function() {
+        const currentIndex = availableYears.indexOf(currentYear);
+        if (currentIndex > 0) {
+            currentYear = availableYears[currentIndex - 1];
+            updateYearDisplay();
+            loadAnalysisData();
+        }
+    });
+    
+    // 修改 resize 事件处理
+    window.addEventListener('resize', function() {
+        if (scenarioChart) scenarioChart.resize();
+    });
+    
+    // 初始化
+    loadAvailableYears();
+});
+</script>
+{% endblock %} 

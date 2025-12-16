@@ -1,0 +1,103 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+myenv/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project specific
+tmp/
+*.log
+.env
+
+# 特定文件
+app-Hessel-Home.py
+csv_structure_analyzer.py
+
+# 测试数据
+*.csv
+test/
+
+# 支付宝账单文件
+alipay_record_*.csv
+alipay_record.csv
+alipay*.csv
+
+# 微信账单文件
+微信支付账单流水文件*.xlsx
+微信支付账单流水文件.xslx
+微信支付账单*.xlsx
+
+# 京东账单文件
+京东交易流水_*.csv
+京东交易流水_.csv
+京东交易*.csv
+
+# 忽略所有txt文件，但不包括requirements.txt
+*.txt
+!requirements.txt
+
+# 忽略所有sh文件
+*.sh
+
+# 忽略特定的txt文件
+merchant_analysis.txt
+alipay_structure_analysis.txt
+alipay_analysis_report.txt
+
+# 忽略特定的md文件
+deployment_pythonanywhere.md
+
+# 忽略日志文件
+*.log
+
+# 忽略Python缓存文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 忽略环境文件
+.env
+.venv
+env/
+venv/
+ENV/
+
+# 忽略IDE配置文件
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 忽略系统文件
+.DS_Store
+Thumbs.db
+Record_File

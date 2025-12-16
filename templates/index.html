@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}账单分析助手{% endblock %}
+
+{% block head %}
+
+{% endblock %}
+
+{% block content %}
+<div class="welcome-section">
+    <h1 class="welcome-title">全能账单分析工具</h1>
+    <p class="welcome-subtitle">
+        支持支付宝和微信账单的一站式分析，获取详细的消费洞察。<br>
+        所有数据分析均在本地进行，保护您的隐私安全。
+    </p>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-chart-pie"></i>
+            </div>
+            <h3 class="feature-title">多维度分析</h3>
+            <p class="feature-description">
+                支持年度、月度、分类、时间等多个维度的消费分析，帮助您更好地了解消费习惯。
+            </p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h3 class="feature-title">隐私保护</h3>
+            <p class="feature-description">
+                数据仅在浏览器中分析，不会永久存储。会话结束后自动删除所有上传的文件。
+            </p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h3 class="feature-title">趋势追踪</h3>
+            <p class="feature-description">
+                展示消费趋势变化，支持环比分析，帮助您更好地规划财务。
+            </p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-search"></i>
+            </div>
+            <h3 class="feature-title">智能搜索</h3>
+            <p class="feature-description">
+                支持交易记录快速搜索和筛选，轻松找到任意历史交易信息。
+            </p>
+        </div>
+    </div>
+
+    <div class="upload-section">
+        <h2 class="upload-title">开始分析您的账单</h2>
+        <p class="privacy-notice">
+            支持导入支付宝(CSV)和微信(XLSX)账单文件，文件将在会话结束后自动删除。<br>
+            所有数据分析均在本地进行，我们不会收集或存储您的个人信息。
+        </p>
+        <a href="{{ url_for('settings') }}" class="start-button">
+            <i class="fas fa-upload"></i>
+            上传账单文件
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 初始化过滤器状态（仅为了 UI 统一）
+        if (window.TransactionFilterManager) {
+            TransactionFilterManager.init(() => {
+                console.log('Filter changed in index (UI only)');
+            });
+        }
+    });
+</script>
+{% endblock %}
