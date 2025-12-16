@@ -1,4 +1,4 @@
-# 账单分析工具 (Payment Record Analysis)
+# 账单分析工具 (payment record analysis)
 
 一个基于 Flask 的全能账单分析工具，支持支付宝和微信账单，提供可视化的消费分析和智能洞察。
 
@@ -29,8 +29,8 @@
 
 1. 克隆仓库：
 ~~~bash
-git clone https://github.com/Hessel2333/alipay_record_analysis.git
-cd alipay_record_analysis
+git clone https://github.com/Hessel2333/payment_record_analysis.git
+cd payment_record_analysis
 ~~~
 
 2. 安装依赖：
@@ -48,7 +48,7 @@ python app.py
 
 ## 项目结构
 ~~~
-alipay-analysis/
+payment_record_analysis/
 ├── app.py                 # Flask 应用主文件
 ├── analyze_merchants.py   # 商家分析模块
 ├── requirements.txt       # 项目依赖
