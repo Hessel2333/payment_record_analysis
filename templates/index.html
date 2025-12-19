@@ -59,10 +59,16 @@
             支持导入支付宝(CSV)和微信(XLSX)账单文件，文件将在会话结束后自动删除。<br>
             所有数据分析均在本地进行，我们不会收集或存储您的个人信息。
         </p>
-        <a href="{{ url_for('settings') }}" class="start-button">
-            <i class="fas fa-upload"></i>
-            上传账单文件
-        </a>
+        <div class="action-buttons">
+            <a href="{{ url_for('settings') }}" class="start-button">
+                <i class="fas fa-upload"></i>
+                上传账单文件
+            </a>
+            <button onclick="enterDemoMode()" class="demo-button">
+                <i class="fas fa-eye"></i>
+                查看示例数据
+            </button>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -77,5 +83,23 @@
             });
         }
     });
+
+    function enterDemoMode() {
+        fetch('/api/demo/enter', {
+            method: 'POST'
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/yearly';
+                } else {
+                    alert('进入演示模式失败');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('发生错误，请重试');
+            });
+    }
 </script>
 {% endblock %}

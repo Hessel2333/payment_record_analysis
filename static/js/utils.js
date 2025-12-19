@@ -368,52 +368,16 @@ function showTransactionModal(title, transactions) {
         updateTable();
     }
 
-    // 绑定金额筛选按钮事件
-    // 注意：这里每次调用都会重新绑定，可能会导致多次绑定。
-    // 最好是将绑定逻辑移出函数，或者使用 cloneNode 清除监听器。
-    // 为了简单起见，这里使用 cloneNode 清除旧的监听器
-    const filterBtns = document.querySelectorAll('.filter-btn');
-    filterBtns.forEach(btn => {
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
-    });
-
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-            // 更新按钮状态
-            document.querySelectorAll('.filter-btn').forEach(b =>
-                b.classList.remove('active'));
-            this.classList.add('active');
-
-            // 应用筛选
-            filterTransactions(this.dataset.filter);
-        });
-    });
+    // 根据当前全局筛选状态初始化
+    filterTransactions(window.TransactionFilterManager.get());
 
     modalTitle.textContent = title;
     modal.style.display = 'flex';
 
-    // 移除之前的事件监听器
-    const sortBtns = modal.querySelectorAll('.sort-btn');
-    const sortableHeaders = modal.querySelectorAll('th.sortable');
-
-    // 清除之前的事件监听器
-    sortBtns.forEach(btn => {
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
-    });
-    sortableHeaders.forEach(th => {
-        const newTh = th.cloneNode(true);
-        th.parentNode.replaceChild(newTh, th);
-    });
-
-    // 重新获取元素（因为被替换了）
-    const newSortBtns = modal.querySelectorAll('.sort-btn');
-    const newSortableHeaders = modal.querySelectorAll('th.sortable');
-
     // 重新绑定排序按钮事件
-    newSortBtns.forEach(btn => {
-        btn.addEventListener('click', function () {
+    modal.querySelectorAll('.sort-btn').forEach(btn => {
+        // 使用 onclick 替换之前的 addEventListener 以避免多重绑定
+        btn.onclick = function () {
             const sortField = this.dataset.sort;
             if (currentSort.field === sortField) {
                 currentSort.direction = currentSort.direction === 'desc' ? 'asc' : 'desc';
@@ -421,12 +385,12 @@ function showTransactionModal(title, transactions) {
                 currentSort = { field: sortField, direction: 'desc' };
             }
             updateTable();
-        });
+        };
     });
 
     // 重新绑定表头排序事件
-    newSortableHeaders.forEach(th => {
-        th.addEventListener('click', function () {
+    modal.querySelectorAll('th.sortable').forEach(th => {
+        th.onclick = function () {
             const sortField = this.dataset.sort;
             if (currentSort.field === sortField) {
                 currentSort.direction = currentSort.direction === 'desc' ? 'asc' : 'desc';
@@ -434,8 +398,34 @@ function showTransactionModal(title, transactions) {
                 currentSort = { field: sortField, direction: 'desc' };
             }
             updateTable();
-        });
+        };
     });
+
+    // 监听全局筛选点击
+    const handleFilterChange = (e) => {
+        const filterType = e.detail?.filterType || e.target?.dataset?.filter;
+        if (filterType) {
+            filterTransactions(filterType);
+        }
+    };
+
+    window.addEventListener('transactionFilterChanged', handleFilterChange);
+
+    // 弹窗关闭时移除监听
+    const originalClose = modal.querySelector('.modal-close').onclick;
+    const closeModal = () => {
+        modal.style.display = 'none';
+        window.removeEventListener('transactionFilterChanged', handleFilterChange);
+    };
+    modal.querySelector('.modal-close').onclick = closeModal;
+
+    // 点击外部关闭也需要清理
+    const originalModalClick = modal.onclick;
+    modal.onclick = function (e) {
+        if (e.target === this) {
+            closeModal();
+        }
+    };
 
     // 初始化表格
     updateTable();
@@ -519,12 +509,20 @@ const TransactionFilterManager = {
                 if (callback) {
                     callback(filterType);
                 }
+
+                // 派发全局事件，供弹窗等其他组件响应
+                window.dispatchEvent(new CustomEvent('transactionFilterChanged', {
+                    detail: { filterType: filterType }
+                }));
             });
         });
 
-        // 监听自定义事件
-        window.addEventListener('filterChanged', (e) => {
-            console.log('Filter changed:', e.detail);
+        // 监听全局事件以同步UI按钮状态
+        window.addEventListener('transactionFilterChanged', (e) => {
+            const filterType = e.detail.filterType;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.filter === filterType);
+            });
         });
 
         return currentFilter;
@@ -567,6 +565,7 @@ function renderSankeyChart(data) {
             {
                 type: 'sankey',
                 layoutIterations: 0,  // 禁止自动优化布局，严格按照数据顺序排列，避免连线交叉
+                nodeGap: 12,          // 增加节点间距
                 data: data.nodes,
                 links: data.links,
                 emphasis: {

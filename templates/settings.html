@@ -7,117 +7,132 @@
 {% endblock %}
 
 {% block content %}
-{% if show_upload_notice %}
-<div class="alert-message">
-    <div class="alert-icon">
-        <i class="fas fa-exclamation-circle"></i>
-    </div>
-    <div class="alert-content">
-        <div class="alert-title">需要上传数据</div>
-        <div class="alert-description">
-            请先上传支付宝账单文件，系统将为您生成详细的消费分析报告。
-            <br>
-            上传后的数据将在本地进行分析，30分钟后自动清除，请放心使用。
+<div class="settings-page">
+    {% if show_upload_notice %}
+    <div class="alert-message">
+        <div class="alert-icon">
+            <i class="fas fa-exclamation-circle"></i>
         </div>
-    </div>
-</div>
-{% endif %}
-
-<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
-    <h1 class="page-title">文件管理</h1>
-    <div class="session-timer">
-        <i class="fas fa-clock"></i>
-        <span>会话剩余时间: <span id="timeRemaining">--:--</span></span>
-    </div>
-</div>
-
-<div class="split-layout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px;">
-    <!-- 左侧：支付宝专区 -->
-    <div class="provider-column alipay-column">
-        <h2 class="column-header"
-            style="color: #1677FF; border-bottom: 2px solid #1677FF; padding-bottom: 10px; margin-bottom: 20px;">
-            <i class="fab fa-alipay"></i> 支付宝账单
-        </h2>
-
-        <!-- 支付宝指南 -->
-        <div class="upload-guide">
-            <h3>如何获取支付宝账单？</h3>
-            <ol>
-                <li>打开支付宝 App -> 我的 -> 账单</li>
-                <li>右上角 ... -> 开具交易流水证明 -> 用于个人对账 -> 申请</li>
-                <li>自定义时间范围（最长为一年） -> 填写邮箱 -> 下载账单</li>
-                <li>申请记录中找到解压密码 -> 解压下载的文件，获取 CSV 文件</li>
-                <li>按年份重命名为【alipay_record_2024.csv】格式</li>
-            </ol>
-        </div>
-
-        <!-- 支付宝上传 -->
-        <label class="file-upload" id="alipayUploadArea" style="height: 180px;">
-            <input type="file" id="alipayInput" accept=".csv" multiple>
-            <div class="upload-icon">
-                <i class="fas fa-file-csv"></i>
+        <div class="alert-content">
+            <div class="alert-title">需要上传数据</div>
+            <div class="alert-description">
+                请先上传支付宝账单文件，系统将为您生成详细的消费分析报告。
+                <br>
+                上传后的数据将在本地进行分析，30分钟后自动清除，请放心使用。
             </div>
-            <div class="upload-text">
-                点击或拖拽<br>支付宝 CSV 文件
-                <br><span style="font-size: 12px; opacity: 0.7;">最大 16MB</span>
-            </div>
-        </label>
+        </div>
+    </div>
+    {% endif %}
 
-        <!-- 支付宝文件列表 -->
-        <div class="file-list-container">
-            <h4>已上传文件</h4>
-            <div class="file-list" id="alipayFileList"></div>
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h1 class="page-title">文件管理</h1>
+        <div class="session-timer">
+            <i class="fas fa-clock"></i>
+            <span>会话剩余时间: <span id="timeRemaining">--:--</span></span>
         </div>
     </div>
 
-    <!-- 右侧：微信专区 -->
-    <div class="provider-column wechat-column">
-        <h2 class="column-header"
-            style="color: #07C160; border-bottom: 2px solid #07C160; padding-bottom: 10px; margin-bottom: 20px;">
-            <i class="fab fa-weixin"></i> 微信账单
-        </h2>
+    <div class="split-layout" style="margin-top: 20px;">
+        <!-- 左侧：支付宝专区 -->
+        <div class="provider-column alipay-column">
+            <h2 class="column-header">
+                <i class="fab fa-alipay"></i> 支付宝账单
+            </h2>
 
-        <!-- 微信指南 -->
-        <div class="upload-guide">
-            <h3>如何获取微信账单？</h3>
-            <ol>
-                <li>打开微信 App -> 我 -> 服务 -> 钱包 -> 账单</li>
-                <li>点击右上角 [常见问题] -> 下载账单 -> 用于个人对账</li>
-                <li>选择账单时间（最长三个月，可多次申请） -> 下一步</li>
-                <li>填写邮箱 -> 确认申请 -> 输入支付密码</li>
-                <li>解压下载的压缩包，获取 <span class="highlight">.xlsx</span> 格式文件</li>
-            </ol>
+            <!-- 支付宝指南 -->
+            <div class="upload-guide">
+                <h3>如何获取支付宝账单？</h3>
+                <ol>
+                    <li>打开支付宝 App -> 我的 -> 账单</li>
+                    <li>右上角 ... -> 开具交易流水证明 -> 用于个人对账 -> 申请</li>
+                    <li>自定义时间范围（最长为一年） -> 填写邮箱 -> 下载账单</li>
+                    <li>申请记录中找到解压密码 -> 解压下载的文件，获取 CSV 文件</li>
+                    <li>按年份重命名为【alipay_record_2024.csv】格式</li>
+                </ol>
+            </div>
+
+            <!-- 支付宝上传 -->
+            <label class="file-upload" id="alipayUploadArea" style="height: 180px;">
+                <input type="file" id="alipayInput" accept=".csv" multiple>
+                <div class="upload-icon">
+                    <i class="fas fa-file-csv"></i>
+                </div>
+                <div class="upload-text">
+                    点击或拖拽<br>支付宝 CSV 文件
+                    <br><span style="font-size: 12px; opacity: 0.7;">最大 16MB</span>
+                </div>
+            </label>
+
+            <!-- 支付宝文件列表 -->
+            <div class="file-list-container">
+                <h4>已上传文件</h4>
+                <div class="file-list" id="alipayFileList"></div>
+            </div>
         </div>
 
-        <!-- 微信上传 -->
-        <label class="file-upload" id="wechatUploadArea" style="height: 180px;">
-            <input type="file" id="wechatInput" accept=".xlsx" multiple>
-            <div class="upload-icon">
-                <i class="fas fa-file-excel"></i>
-            </div>
-            <div class="upload-text">
-                点击或拖拽<br>微信 XLSX 文件
-                <br><span style="font-size: 12px; opacity: 0.7;">最大 16MB</span>
-            </div>
-        </label>
+        <div class="provider-column wechat-column">
+            <h2 class="column-header">
+                <i class="fab fa-weixin"></i> 微信账单
+            </h2>
 
-        <!-- 微信文件列表 -->
-        <div class="file-list-container">
-            <h4>已上传文件</h4>
-            <div class="file-list" id="wechatFileList"></div>
+            <!-- 微信指南 -->
+            <div class="upload-guide">
+                <h3>如何获取微信账单？</h3>
+                <ol>
+                    <li>打开微信 App -> 我 -> 服务 -> 钱包 -> 账单</li>
+                    <li>点击右上角 [...] -> 账单下载 -> 用于个人对账</li>
+                    <li>选择接收方式（微信/邮箱）、账单时间 -> 下一步</li>
+                    <li><strong>方式一（推荐）：</strong>刷脸验证 -> 微信消息直接下载 XLSX 文件</li>
+                    <li><strong>方式二：</strong>输入邮箱 -> 刷脸 -> 邮箱接收 (密码在微信消息中)</li>
+                </ol>
+            </div>
+
+            <!-- 微信上传 -->
+            <label class="file-upload" id="wechatUploadArea" style="height: 180px;">
+                <input type="file" id="wechatInput" accept=".xlsx,.csv" multiple>
+                <div class="upload-icon">
+                    <i class="fas fa-file-invoice"></i>
+                </div>
+                <div class="upload-text">
+                    点击或拖拽<br>微信 XLSX/CSV 文件
+                    <br><span style="font-size: 12px; opacity: 0.7;">最大 16MB</span>
+                </div>
+            </label>
+
+            <!-- 微信文件列表 -->
+            <div class="file-list-container">
+                <h4>已上传文件</h4>
+                <div class="file-list" id="wechatFileList"></div>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- 在 upload-section 后面添加删除区域 -->
-<div class="delete-section">
-    <h2 class="section-title">数据管理</h2>
-    <div class="delete-area">
-        <button id="deleteAllBtn" class="delete-all-btn">
-            <i class="fas fa-trash-alt"></i>
-            删除所有账单数据
-        </button>
-        <p class="delete-warning">删除后将清空所有已上传的账单文件和分析数据，此操作不可恢复。</p>
+    <!-- 移除原来的 action-section，改为底部固定栏 -->
+    <div class="bottom-action-bar" id="bottomActionBar">
+        <div class="action-bar-content">
+            <div class="file-summary">
+                <i class="fas fa-file-alt"></i>
+                <span id="fileCountText">请上传账单文件</span>
+            </div>
+            <div class="action-buttons">
+                <a href="{{ url_for('yearly') }}" class="start-button disabled" id="startAnalysisBtn">
+                    <i class="fas fa-chart-line"></i>
+                    开始分析
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 在 upload-section 后面添加删除区域 -->
+    <div class="delete-section">
+        <h2 class="section-title">数据管理</h2>
+        <div class="delete-area">
+            <button id="deleteAllBtn" class="delete-all-btn">
+                <i class="fas fa-trash-alt"></i>
+                删除所有账单数据
+            </button>
+            <p class="delete-warning">删除后将清空所有已上传的账单文件和分析数据，此操作不可恢复。</p>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -125,14 +140,55 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const isDemoMode = "{{ 'true' if session.get('is_demo') else 'false' }}" === 'true';
+
         const alipayUploadArea = document.getElementById('alipayUploadArea');
         const wechatUploadArea = document.getElementById('wechatUploadArea');
         const alipayInput = document.getElementById('alipayInput');
         const wechatInput = document.getElementById('wechatInput');
+        const bottomActionBar = document.getElementById('bottomActionBar');
+        const startAnalysisBtn = document.getElementById('startAnalysisBtn');
+        const fileCountText = document.getElementById('fileCountText');
+
+        // 更新底部栏状态
+        function updateActionBar() {
+            const alipayCount = document.getElementById('alipayFileList').children.length;
+            const wechatCount = document.getElementById('wechatFileList').children.length;
+            const totalCount = alipayCount + wechatCount;
+
+            if (totalCount > 0) {
+                fileCountText.textContent = `已就绪 ${totalCount} 个账单文件`;
+                startAnalysisBtn.classList.remove('disabled');
+                bottomActionBar.classList.add('visible');
+            } else {
+                fileCountText.textContent = '请上传账单文件';
+                startAnalysisBtn.classList.add('disabled');
+                // 没有文件时隐藏底部栏，避免遮挡
+                bottomActionBar.classList.remove('visible');
+            }
+        }
+
+        // 拦截点击事件（在演示模式下）
+        function interceptUploadClick(e) {
+            if (isDemoMode) {
+                e.preventDefault();
+                e.stopPropagation(); // 阻止事件冒泡
+                alert('演示模式下无法上传文件，请先点击顶部的"退出演示"按钮');
+                return false;
+            }
+        }
+
+        alipayUploadArea.addEventListener('click', interceptUploadClick);
+        wechatUploadArea.addEventListener('click', interceptUploadClick);
 
         const alipayFileList = document.getElementById('alipayFileList');
         const wechatFileList = document.getElementById('wechatFileList');
         const maxFileSize = 16 * 1024 * 1024; // 16MB
+
+        // 监听列表变化以更新底部栏
+        const observer = new MutationObserver(updateActionBar);
+        observer.observe(alipayFileList, { childList: true });
+        observer.observe(wechatFileList, { childList: true });
 
         // 初始化过滤器状态（仅为了 UI 统一，不执行实际过滤逻辑）
         if (window.TransactionFilterManager) {
@@ -160,13 +216,10 @@
             formData.append('file', file);
 
             // 确定目标列表
-            let targetList = alipayFileList; // 默认 (不应该用到)
-            if (file.name.endsWith('.csv')) {
-                targetList = alipayFileList;
-            } else if (file.name.endsWith('.xlsx')) {
+            let targetList = alipayFileList;
+            if (errorArea === wechatUploadArea) {
                 targetList = wechatFileList;
-            } else {
-                // 如果后续支持其他，这里扩展
+            } else if (errorArea === alipayUploadArea) {
                 targetList = alipayFileList;
             }
 
@@ -188,21 +241,46 @@
 
                 const data = await response.json();
                 if (data.success) {
-                    updateFileItem(fileItem, data.filename, true, data.message);
+                    // 移除进度条
+                    if (progressDiv && progressDiv.parentNode) {
+                        progressDiv.parentNode.removeChild(progressDiv);
+                    }
+                    // 统一显示"已上传"，保持与刷新后一致
+                    updateFileItem(fileItem, data.filename, true, '已上传');
+
+                    // 立即对列表进行排序 (无需刷新)
+                    sortFileList(targetList);
+
                     showToast('文件上传成功');
                     handleUploadSuccess();
-                    // 上传成功后跳转到年度分析页面
-                    setTimeout(() => {
-                        window.location.href = "{{ url_for('yearly') }}";
-                    }, 1000);
+                    // 上传成功后不再自动跳转，由用户点击"开始分析"按钮跳转
                 } else {
+                    if (progressDiv && progressDiv.parentNode) {
+                        progressDiv.parentNode.removeChild(progressDiv);
+                    }
                     updateFileItem(fileItem, file.name, false, data.error);
                     showError(data.error);
                 }
             } catch (error) {
+                if (progressDiv && progressDiv.parentNode) {
+                    progressDiv.parentNode.removeChild(progressDiv);
+                }
                 updateFileItem(fileItem, file.name, false, '上传失败，请重试');
                 showError('网络错误，请重试');
             }
+        }
+
+        // 前端文件列表排序函数
+        function sortFileList(container) {
+            const items = Array.from(container.children);
+            items.sort((a, b) => {
+                const nameA = a.querySelector('.file-name').textContent;
+                const nameB = b.querySelector('.file-name').textContent;
+                return nameA.localeCompare(nameB, 'zh-CN', { numeric: true });
+            });
+
+            // 重新追加元素以改变顺序
+            items.forEach(item => container.appendChild(item));
         }
 
         // 添加移动端检测
@@ -247,7 +325,8 @@
         }
 
         setupDragDrop(alipayUploadArea, '.csv');
-        setupDragDrop(wechatUploadArea, '.xlsx');
+        setupDragDrop(alipayUploadArea, '.csv');
+        setupDragDrop(wechatUploadArea, '.xlsx,.csv');
 
         // 处理文件选择
         alipayInput.addEventListener('change', (e) => {
@@ -255,15 +334,25 @@
         });
 
         wechatInput.addEventListener('change', (e) => {
-            handleFiles(e.target.files, '.xlsx', wechatUploadArea);
+            handleFiles(e.target.files, '.xlsx,.csv', wechatUploadArea);
         });
 
         // 加载现有文件列表
         loadExistingFiles();
 
         function handleFiles(files, allowedExt, errorArea) {
+            if (isDemoMode) {
+                alert('演示模式下无法上传文件，请先点击顶部的"退出演示"按钮');
+                return;
+            }
+
+            const allowedExtensions = allowedExt.split(',').map(e => e.trim().toLowerCase());
+
             Array.from(files).forEach(file => {
-                if (file.name.toLowerCase().endsWith(allowedExt)) {
+                const fileName = file.name.toLowerCase();
+                const isAllowed = allowedExtensions.some(ext => fileName.endsWith(ext));
+
+                if (isAllowed) {
                     uploadFile(file, errorArea);
                 } else {
                     showError(`请上传 ${allowedExt} 格式的文件`, errorArea);
@@ -277,10 +366,19 @@
                 .then(data => {
                     data.files.forEach(file => {
                         const fileItem = createFileItem(file.name, '已上传', true);
-                        if (file.name.endsWith('.csv')) {
-                            alipayFileList.appendChild(fileItem);
-                        } else if (file.name.endsWith('.xlsx')) {
+
+                        // 使用后端返回的 source 字段判断，如果不存在(旧API)则回退到扩展名判断
+                        let isWechat = false;
+                        if (file.source) {
+                            isWechat = file.source === 'wechat';
+                        } else {
+                            isWechat = file.name.endsWith('.xlsx');
+                        }
+
+                        if (isWechat) {
                             wechatFileList.appendChild(fileItem);
+                        } else {
+                            alipayFileList.appendChild(fileItem);
                         }
                     });
                 });
@@ -292,12 +390,14 @@
             item.innerHTML = `
             <i class="fas ${filename.endsWith('.xlsx') ? 'fa-file-excel' : 'fa-file-csv'}"></i>
             <span class="file-name">${filename}</span>
-            <span class="file-status ${isSuccess === null ? '' : isSuccess ? 'status-success' : 'status-error'}">${status}</span>
-            ${isSuccess !== null ? `
-                <button class="delete-btn" onclick="deleteFile('${filename}')">
-                    <i class="fas fa-trash"></i>
-                </button>
-            ` : ''}
+            <div class="file-actions">
+                <span class="file-status ${isSuccess === null ? '' : isSuccess ? 'status-success' : 'status-error'}">${status}</span>
+                ${isSuccess !== null ? `
+                    <button class="delete-btn" onclick="deleteFile('${filename}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                ` : ''}
+            </div>
         `;
             return item;
         }
@@ -307,12 +407,13 @@
             item.querySelector('.file-status').textContent = message;
             item.querySelector('.file-status').className = `file-status ${success ? 'status-success' : 'status-error'}`;
 
-            if (!item.querySelector('.delete-btn')) {
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'delete-btn';
-                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
-                deleteBtn.onclick = () => deleteFile(filename);
-                item.appendChild(deleteBtn);
+            const deleteBtn = item.querySelector('.delete-btn');
+            if (!deleteBtn) {
+                const newDeleteBtn = document.createElement('button');
+                newDeleteBtn.className = 'delete-btn';
+                newDeleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                newDeleteBtn.onclick = () => deleteFile(filename);
+                item.querySelector('.file-actions').appendChild(newDeleteBtn);
             }
         }
 

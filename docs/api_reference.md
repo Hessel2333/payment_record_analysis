@@ -11,7 +11,7 @@
 POST /api/upload
 Content-Type: multipart/form-data
 
-file: 账单文件 (支持 .csv 或 .xlsx)
+file: 账单文件 (支持 .csv 或 .xlsx; 支付宝仅支持 .csv，微信支持 .xlsx/.csv)
 ~~~
 
 **响应示例：**
@@ -219,5 +219,5 @@ GET /api/session/status
 - 所有 API 请求需要在有效会话内进行
 - 会话超时时间为 30 分钟
 - 文件大小限制为 16MB
-- 仅支持 CSV (支付宝) 和 XLSX (微信) 格式文件上传
+- 仅支持 CSV (支付宝/微信) 和 XLSX (微信) 格式文件上传
 ~~~ 

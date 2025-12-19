@@ -14,6 +14,26 @@
 </head>
 
 <body>
+    {% if session.get('is_demo') %}
+    <div class="demo-banner">
+        <div class="demo-content">
+            <i class="fas fa-flask"></i>
+            <span>您正在浏览示例数据（仅供演示功能预览）</span>
+        </div>
+        <button onclick="exitDemoMode()" class="exit-demo-btn">退出演示</button>
+    </div>
+    <script>
+        function exitDemoMode() {
+            if (confirm('确定要退出演示模式吗？')) {
+                fetch('/api/demo/exit', { method: 'POST' })
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success) window.location.href = '/';
+                    });
+            }
+        }
+    </script>
+    {% endif %}
     <div class="app-container">
         <div class="sidebar">
             <div class="logo">

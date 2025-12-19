@@ -83,6 +83,10 @@ def user_cache(f):
     
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # 演示模式下不需要缓存
+        if session.get('is_demo'):
+            return f(*args, **kwargs)
+
         # 获取当前用户ID
         user_id = session.get('user_id')
         if not user_id:
@@ -118,6 +122,23 @@ def user_cache(f):
 @user_cache
 def load_alipay_data():
     try:
+        # 演示模式逻辑
+        if session.get('is_demo'):
+            sample_file = os.path.join(app.static_folder, 'sample_data.csv')
+            if not os.path.exists(sample_file):
+                raise FileNotFoundError("示例数据文件不存在")
+            
+            df = pd.read_csv(sample_file)
+            df['交易时间'] = pd.to_datetime(df['交易时间'])
+            df['月份'] = df['交易时间'].dt.strftime('%Y-%m')
+            df['日期'] = df['交易时间'].dt.strftime('%Y-%m-%d')
+            # 确保演示数据也有这些列
+            if '是否退款' not in df.columns:
+                 df['是否退款'] = False
+            if '来源' not in df.columns:
+                 df['来源'] = '示例数据'
+            return df
+
         session_dir = get_session_dir()
         all_data = []
         
@@ -125,41 +146,100 @@ def load_alipay_data():
         for filename in os.listdir(session_dir):
             filepath = os.path.join(session_dir, filename)
             
-            # 处理 CSV 文件 (支付宝)
+            # 处理 CSV 文件
             if filename.endswith('.csv'):
                 try:
-                    # 读取CSV文件
-                    with open(filepath, encoding='gbk') as f:
-                        lines = f.readlines()
+                    # 判断是否为微信账单 (CSV格式)
+                    is_wechat_csv = (detect_file_source(filepath) == 'wechat')
+                    
+                    if is_wechat_csv:
+                        # 微信 CSV 处理逻辑
+                        with open(filepath, encoding='utf-8-sig') as f:
+                            lines = f.readlines()
+                            header_row = None
+                            for i, line in enumerate(lines):
+                                if '交易时间' in line and '交易类型' in line:
+                                    header_row = i
+                                    break
+                                    
+                        if header_row is not None:
+                            df = pd.read_csv(filepath, encoding='utf-8-sig', skiprows=header_row)
+                            
+                            # 映射列名
+                            df = df.rename(columns={
+                                '交易类型': '交易分类',
+                                '商品': '商品说明',
+                                '金额(元)': '金额',
+                                '当前状态': '交易状态',
+                                '支付方式': '收/付款方式'
+                            })
+                            
+                            # 清理金额列 (移除 '¥')
+                            df['金额'] = df['金额'].astype(str).str.replace('¥', '').str.replace(',', '').astype(float)
+                            
+                            # 处理时间
+                            df['交易时间'] = pd.to_datetime(df['交易时间'])
+                            df['月份'] = df['交易时间'].dt.strftime('%Y-%m')
+                            df['日期'] = df['交易时间'].dt.strftime('%Y-%m-%d')
+                            
+                            # 标记退款
+                            df['是否退款'] = df['交易状态'].astype(str).str.contains('退款|关闭|撤销', case=False, na=False)
+                            df.loc[df['是否退款'], '金额'] = -df.loc[df['是否退款'], '金额'].abs()
+                            
+                            # 确保必要列
+                            if '交易对方' not in df.columns:
+                                df['交易对方'] = '未知'
+                            if '收/支' not in df.columns:
+                                df['收/支'] = '/'
+                                
+                            df['来源'] = '微信'
+                            all_data.append(df)
+                            
+                    else:
+                        # 支付宝 CSV 处理逻辑 (默认 gbk)
+                        try:
+                            # 重新以 GBK 打开 (支付宝通常是 GBK)
+                            with open(filepath, encoding='gbk') as f:
+                                lines = f.readlines()
+                        except UnicodeDecodeError:
+                            # 如果 GBK 失败，尝试 UTF-8
+                            with open(filepath, encoding='utf-8') as f:
+                                lines = f.readlines()
+                                
                         header_row = None
                         status_row = None
                         for i, line in enumerate(lines):
-                            if '交易状态' in line:
+                            if '交易状态' in line and not status_row:
                                 status_row = i
                             if '交易时间' in line:
                                 header_row = i
                                 break
                     
-                    if header_row is not None:
-                        df = pd.read_csv(filepath, encoding='gbk', skiprows=header_row)
-                        
-                        # 获取交易状态列
-                        status_df = pd.read_csv(filepath, encoding='gbk', skiprows=status_row, nrows=1)
-                        status_column = status_df.columns[0]
-                        
-                        # 数据预处理
-                        df['交易时间'] = pd.to_datetime(df['交易时间'])
-                        df['月份'] = df['交易时间'].dt.strftime('%Y-%m')
-                        df['日期'] = df['交易时间'].dt.strftime('%Y-%m-%d')
-                        
-                        # 标记交易状态
-                        df['是否退款'] = df[status_column].isin(['退款成功', '交易关闭'])
-                        df.loc[df['是否退款'], '金额'] = -df.loc[df['是否退款'], '金额']
-                        
-                        # 添加来源标识
-                        df['来源'] = '支付宝'
-                        
-                        all_data.append(df)
+                        if header_row is not None:
+                            # 读取数据 (使用与上面相同的编码尝试，这里简化，pandas read_csv 也可以 try-except)
+                            try:
+                                df = pd.read_csv(filepath, encoding='gbk', skiprows=header_row)
+                                status_df = pd.read_csv(filepath, encoding='gbk', skiprows=status_row, nrows=1)
+                            except UnicodeDecodeError:
+                                df = pd.read_csv(filepath, encoding='utf-8', skiprows=header_row)
+                                status_df = pd.read_csv(filepath, encoding='utf-8', skiprows=status_row, nrows=1)
+                            
+                            # ... (原有支付宝处理逻辑) ...
+                            status_column = status_df.columns[0]
+                            
+                            # 数据预处理
+                            df['交易时间'] = pd.to_datetime(df['交易时间'])
+                            df['月份'] = df['交易时间'].dt.strftime('%Y-%m')
+                            df['日期'] = df['交易时间'].dt.strftime('%Y-%m-%d')
+                            
+                            # 标记交易状态
+                            df['是否退款'] = df[status_column].isin(['退款成功', '交易关闭'])
+                            df.loc[df['是否退款'], '金额'] = -df.loc[df['是否退款'], '金额']
+                            
+                            # 添加来源标识
+                            df['来源'] = '支付宝'
+                            
+                            all_data.append(df)
                         
                 except Exception as e:
                     logger.error(f"Error processing CSV file {filename}: {str(e)}")
@@ -242,6 +322,10 @@ def validate_dataframe(df):
 def check_data_exists(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # 演示模式直接通过
+        if session.get('is_demo'):
+            return f(*args, **kwargs)
+
         # 如果是 settings 页面，不需要检查数据
         if request.endpoint == 'settings':
             return f(*args, **kwargs)
@@ -462,6 +546,10 @@ def monthly_analysis():
         # 计算分类统计
         expense_categories = current_expense_df.groupby('交易分类')['金额'].sum()
         income_categories = current_income_df.groupby('交易分类')['金额'].sum()
+
+        # 计算分来源的分类统计
+        expense_source = current_expense_df.groupby(['来源', '交易分类'])['金额'].sum().reset_index().to_dict('records')
+        income_source = current_income_df.groupby(['来源', '交易分类'])['金额'].sum().reset_index().to_dict('records')
         
         # 生成当月所有日期
         import calendar
@@ -518,6 +606,10 @@ def monthly_analysis():
                         'names': income_categories.index.tolist(),
                         'amounts': income_categories.values.tolist()
                     }
+                },
+                'categories_source': {
+                    'expense': expense_source,
+                    'income': income_source
                 }
             }
         })
@@ -908,8 +1000,10 @@ def time_analysis():
         year = request.args.get('year', type=int)
         filter_type = request.args.get('filter', 'all')
         
-        # 只分析支出数据
-        expense_df = df[df['收/支'] == '支出']
+        # 只分析支出数据，且排除退款
+        expense_df = df[(df['收/支'] == '支出') & (~df['是否退款'])]
+        # 再次确保金额大于0
+        expense_df = expense_df[expense_df['金额'] > 0]
         
         # 如果指定了年份，过滤对应年份的数据
         if year:
@@ -993,7 +1087,8 @@ def filtered_monthly_analysis():
     filter_type = request.args.get('filter', 'all')
     
     # 在原始交易数据层面进行过滤
-    expense_df = df[df['收/支'] == '支出']
+    expense_df = df[(df['收/支'] == '支出') & (~df['是否退款'])]
+    expense_df = expense_df[expense_df['金额'] > 0]
     if filter_type == 'large':
         expense_df = expense_df[expense_df['金额'] > 1000]
     elif filter_type == 'small':
@@ -1730,8 +1825,24 @@ def get_category_available_dates():
         logger.error(f"Error getting category available dates: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/demo/enter', methods=['POST'])
+def enter_demo_mode():
+    session['is_demo'] = True
+    session['user_id'] = 'demo_user'  # 为了兼容 login_required 等检查
+    return jsonify({'success': True})
+
+@app.route('/api/demo/exit', methods=['POST'])
+def exit_demo_mode():
+    session.pop('is_demo', None)
+    if session.get('user_id') == 'demo_user':
+        session.pop('user_id', None)
+    return jsonify({'success': True})
+
 @app.route('/settings')
 def settings():
+    # 访问设置页面时确保会话已初始化
+    # 这可以防止并发上传文件时产生多个不同的会话ID
+    get_session_dir()
     return render_template('settings.html', active_page='settings')
 
 @app.route('/api/upload', methods=['POST'])
@@ -1754,7 +1865,32 @@ def upload_file():
             os.makedirs(session_dir, mode=0o700)
             
         # 安全地保存文件
-        filename = secure_filename(file.filename)
+        original_filename = file.filename
+        safe_filename = secure_filename(original_filename)
+        
+        # 优化文件名: 去除微信导出文件名中的时间戳后缀
+        # 例如: 20210401-20210630_20251216085838.xlsx -> 20210401-20210630.xlsx
+        import re
+        match = re.match(r'^(\d{8}-\d{8})_\d+(?:\.xlsx|\.csv)$', safe_filename)
+        if match:
+             base = match.group(1)
+             ext = os.path.splitext(safe_filename)[1]
+             safe_filename = f"{base}{ext}"
+
+        # 处理纯中文文件名被 secure_filename 变成空或仅后缀的情况
+        if not safe_filename or safe_filename.startswith('.'):
+            #如果不包含有效文件名，使用时间戳+随机字符
+            ext = os.path.splitext(original_filename)[1]
+            safe_filename = f"upload_{int(datetime.now().timestamp())}_{token_hex(4)}{ext}"
+            
+        # 防止同名文件覆盖，添加数字后缀
+        base_name, ext = os.path.splitext(safe_filename)
+        counter = 1
+        filename = safe_filename
+        while os.path.exists(os.path.join(session_dir, filename)):
+            filename = f"{base_name}_{counter}{ext}"
+            counter += 1
+            
         filepath = os.path.join(session_dir, filename)
         file.save(filepath)
         
@@ -1777,6 +1913,23 @@ def upload_file():
         logger.exception("Upload failed with error:")  # 这会记录完整的堆栈跟踪
         return jsonify({'success': False, 'error': str(e)}), 500
 
+def detect_file_source(filepath):
+    """检测文件是支付宝还是微信账单"""
+    filename = os.path.basename(filepath)
+    if filename.endswith('.xlsx'):
+        return 'wechat'
+    elif filename.endswith('.csv'):
+        try:
+            # 读取文件前1024字节判断
+            with open(filepath, encoding='utf-8-sig') as f:
+                content = f.read(1024)
+            if '微信支付账单' in content:
+                return 'wechat'
+        except:
+            pass
+        return 'alipay'
+    return 'unknown'
+
 @app.route('/api/files')
 def list_files():
     """列出当前会话的文件"""
@@ -1785,10 +1938,15 @@ def list_files():
     if os.path.exists(session_dir):
         for filename in os.listdir(session_dir):
             if filename.endswith('.csv') or filename.endswith('.xlsx'):
+                filepath = os.path.join(session_dir, filename)
                 files.append({
                     'name': filename,
-                    'size': os.path.getsize(os.path.join(session_dir, filename))
+                    'size': os.path.getsize(filepath),
+                    'source': detect_file_source(filepath)
                 })
+    
+    # 按文件名排序
+    files.sort(key=lambda x: x['name'])
     return jsonify({'files': files})
 
 @app.route('/api/files/<filename>', methods=['DELETE'])
@@ -2299,11 +2457,22 @@ def analyze_sankey(df):
             'value': float(amount)
         })
         
-        # 第二层：该分类下的 Top 3 商家
+        # 第二层：该分类下的商家
+        # 逻辑修改：不再固定显示 Top 3，而是显示金额占比超过总支出 0.5% 的商家
         cat_df = expense_df[expense_df['交易分类'] == cat]
-        merchant_stats = cat_df.groupby('交易对方')['金额'].sum().sort_values(ascending=False).head(3)
+        total_expense = expense_df['金额'].sum()
+        threshold = total_expense * 0.005  # 0.5% 阈值
         
-        for merchant, m_amount in merchant_stats.items():
+        merchant_stats = cat_df.groupby('交易对方')['金额'].sum().sort_values(ascending=False)
+        
+        # 筛选超过阈值的商家，且最多只显示 Top 3
+        significant_merchants = merchant_stats[merchant_stats >= threshold].head(3)
+        
+        # 如果没有商家超过阈值，为了避免空连接，至少显示 Top 1 (如果存在)
+        if significant_merchants.empty and not merchant_stats.empty:
+            significant_merchants = merchant_stats.head(1)
+            
+        for merchant, m_amount in significant_merchants.items():
             # 商家名字可能重复（不同分类下），为了桑基图节点唯一，可以加后缀或处理
             # 这里简单处理：如果商家名已存在（比如作为分类名），加个空格
             m_node_name = merchant
@@ -2728,6 +2897,10 @@ def yearly_analysis():
         category_expenses = current_expense_df.groupby('交易分类')['金额'].sum()
         category_incomes = current_income_df.groupby('交易分类')['金额'].sum()
         
+        # 计算分来源的分类统计
+        expense_source = current_expense_df.groupby(['来源', '交易分类'])['金额'].sum().reset_index().to_dict('records')
+        income_source = current_income_df.groupby(['来源', '交易分类'])['金额'].sum().reset_index().to_dict('records')
+        
         # 计算年度统计数据
         yearly_stats = {
             'balance': float(current_balance),  # 这里传递的也是对的
@@ -2782,6 +2955,10 @@ def yearly_analysis():
                         'amounts': category_incomes.values.tolist()
                     }
                 },
+                'categories_source': {
+                    'expense': expense_source,
+                    'income': income_source
+                },
                 'yearly_stats': yearly_stats
             }
         })
@@ -2827,8 +3004,8 @@ def generate_chord_data(df):
     }
     expense_df['weekday'] = expense_df['交易时间'].dt.dayofweek.map(weekday_map)
     
-    # 取 Top 8 分类
-    top_categories = expense_df.groupby('交易分类')['金额'].sum().nlargest(8).index.tolist()
+    # 取 Top 10 分类
+    top_categories = expense_df.groupby('交易分类')['金额'].sum().nlargest(10).index.tolist()
     
     # 统计 星期 -> 分类 的流量
     # 只统计 Top 分类
@@ -2929,8 +3106,8 @@ def generate_radar_data(df):
     if expense_df.empty:
         return {'indicator': [], 'series': []}
     
-    # 获取Top 6分类作为维度
-    top_categories = expense_df.groupby('交易分类')['金额'].sum().nlargest(6).index.tolist()
+    # 获取Top 8分类作为维度 (增加雷达图维度)
+    top_categories = expense_df.groupby('交易分类')['金额'].sum().nlargest(8).index.tolist()
     
     if not top_categories:
         return {'indicator': [], 'series': []}
@@ -2994,9 +3171,9 @@ def generate_themeriver_data(df):
     if expense_df.empty:
         return {'categories': [], 'data': []}
     
-    # 取Top 8 分类
+    # 取Top 10 分类 (增加河流图层数)
     top_categories = expense_df.groupby('交易分类')['金额'].sum()\
-                               .nlargest(8).index.tolist()
+                               .nlargest(10).index.tolist()
     
     # 按月份和分类聚合
     expense_df['month'] = expense_df['交易时间'].dt.to_period('M').astype(str)
@@ -3117,8 +3294,9 @@ def generate_pareto_data(df):
         'percentages': [float(p) for p in percentages]
     }
 
+
 if __name__ == '__main__':
-    # 判断是否在生产环境
+    # 确保上传目录存在生产环境
     is_production = os.environ.get('PRODUCTION', False)
     
     if is_production:

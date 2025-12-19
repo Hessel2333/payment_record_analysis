@@ -95,7 +95,10 @@
             <h2 class="chart-title">支出分类</h2>
         </div>
     </div>
-    <div class="chart-container" id="categoryPieChart" style="height: 400px;"></div>
+    <div class="chart-container" style="display: flex; height: 500px;">
+        <div id="categoryPieChart" style="flex: 1; height: 100%;"></div>
+        <div id="customLegend" style="width: 45%; overflow-y: auto; padding: 20px;"></div>
+    </div>
 </div>
 {% endblock %}
 
@@ -105,7 +108,8 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         let trendChart = null;
-        let categoryPieChart = null;
+        // let categoryPieChart = null; // Remove local declaration to use global or attach to window
+        window.categoryPieChart = null;
         let currentYear = null;
         let availableYears = [];
         let currentData = null;
@@ -117,8 +121,8 @@
             if (!trendChart) {
                 trendChart = echarts.init(document.getElementById('trendChart'));
             }
-            if (!categoryPieChart) {
-                categoryPieChart = echarts.init(document.getElementById('categoryPieChart'));
+            if (!window.categoryPieChart) {
+                window.categoryPieChart = echarts.init(document.getElementById('categoryPieChart'));
             }
         }
 
@@ -175,8 +179,8 @@
             if (trendChart) {
                 trendChart.resize();
             }
-            if (categoryPieChart) {
-                categoryPieChart.resize();
+            if (window.categoryPieChart) {
+                window.categoryPieChart.resize();
             }
         });
 
@@ -419,49 +423,50 @@
                 }]
             };
 
-            // 饼图配置
-            const categoryData = currentType === 'expense' ? data.categories.expense : data.categories.income;
-            const total = categoryData.amounts.reduce((a, b) => a + b, 0);
+            // 处理分来源数据
+            const sourceData = currentType === 'expense' ? data.categories_source.expense : data.categories_source.income;
+            const total = sourceData.reduce((sum, item) => sum + item['金额'], 0);
+
+            // 既然已经有sourceData，我们还需要为了饼图数据（需要unique name）做处理
+            // 为每条数据生成唯一名称: "分类名 (来源)"
+            // 同时准备图例数据
+            const pieData = sourceData.map(item => {
+                const name = `${item['交易分类']}-${item['来源']}`;
+                const percent = (item['金额'] / total * 100);
+                const showLabel = percent > 1;
+                return {
+                    name: name,
+                    value: item['金额'],
+                    originalName: item['交易分类'],
+                    source: item['来源'],
+                    itemStyle: {
+                        color: window.getCategoryColor(item['交易分类'])
+                    },
+                    label: {
+                        show: showLabel
+                    },
+                    labelLine: {
+                        show: showLabel
+                    }
+                };
+            }).sort((a, b) => b.value - a.value);
 
             const pieOption = {
                 tooltip: {
                     trigger: 'item',
                     formatter: function (params) {
                         const percent = ((params.value / total) * 100).toFixed(2);
-                        return `${params.name}<br/>金额：${formatMoney(params.value)} 元<br/>占比：${percent}%`;
+                        return `${params.data.originalName} (${params.data.source})<br/>金额：${formatMoney(params.value)} 元<br/>占比：${percent}%`;
                     }
                 },
                 legend: {
-                    type: 'plain',
-                    orient: 'vertical',
-                    right: '5%',
-                    top: 'middle',
-                    formatter: name => {
-                        const index = categoryData.names.indexOf(name);
-                        const amount = categoryData.amounts[index];
-                        const percentage = ((amount / total) * 100).toFixed(2);
-                        return `${name} (${percentage}%)`;
-                    },
-                    textStyle: {
-                        fontSize: 14,
-                        fontFamily: '-apple-system, SF Pro Text'
-                    },
-                    width: '40%',
-                    itemWidth: 14,
-                    itemHeight: 14,
-                    itemGap: 14,
-                    layout: 'fixed',
-                    columns: 2,
-                    pageIconSize: 12,
-                    pageTextStyle: {
-                        color: 'var(--secondary-text)'
-                    }
+                    show: false // 隐藏自带图例
                 },
                 series: [{
                     name: currentType === 'expense' ? '支出分类' : '收入分类',
                     type: 'pie',
                     radius: ['40%', '70%'],
-                    center: ['35%', '50%'],
+                    center: ['50%', '50%'],
                     avoidLabelOverlap: true,
                     itemStyle: {
                         borderRadius: 4,
@@ -473,7 +478,7 @@
                         position: 'outside',
                         formatter: params => {
                             const percent = ((params.value / total) * 100).toFixed(2);
-                            return percent > 2 ? `${params.name}\n${percent}%` : '';
+                            return `${params.data.originalName}\n${percent}%`;
                         },
                         fontSize: 12,
                         color: '#666',
@@ -483,32 +488,17 @@
                         show: true,
                         length: 15,
                         length2: 10,
-                        maxSurfaceAngle: 80,
                         smooth: true
                     },
-                    data: categoryData.names.map((name, index) => {
-                        const value = categoryData.amounts[index];
-                        const percent = (value / total) * 100;
-
-                        return {
-                            name: name,
-                            value: value,
-                            itemStyle: {
-                                color: window.getCategoryColor(name)
-                            },
-                            label: {
-                                show: percent > 2
-                            },
-                            labelLine: {
-                                show: percent > 2
-                            }
-                        };
-                    }).sort((a, b) => b.value - a.value)
+                    data: pieData
                 }]
             };
 
+            // 渲染自定义图例
+            renderCustomLegend(sourceData, total);
+
             trendChart.setOption(trendOption);
-            categoryPieChart.setOption(pieOption);
+            window.categoryPieChart.setOption(pieOption);
 
             // 为趋势图添加点击事件
             trendChart.off('click');  // 移除之前的事件绑定
@@ -551,10 +541,11 @@
             });
 
             // 为饼图添加点击事件
-            categoryPieChart.off('click');  // 移除之前的事件绑定
-            categoryPieChart.on('click', function (params) {
+            window.categoryPieChart.off('click');  // 移除之前的事件绑定
+            window.categoryPieChart.on('click', function (params) {
                 if (params.componentType === 'series') {
-                    const category = params.name;
+                    // 使用 originalName，因为 name 包含了来源后缀
+                    const category = params.data.originalName || params.name;
                     const title = `${currentYear}年 ${category} ${currentType === 'expense' ? '支出' : '收入'}明细`;
 
                     // 构建查询参数
@@ -589,9 +580,170 @@
                         });
                 }
             });
+
+            // 为饼图添加鼠标悬停事件 (高亮右侧图例)
+            window.categoryPieChart.on('mouseover', function (params) {
+                if (params.componentType === 'series') {
+                    const uniqueName = params.name; // This is the unique name we constructed
+                    const legendItem = document.querySelector(`.legend-item[data-unique-name="${uniqueName}"]`);
+                    if (legendItem) {
+                        legendItem.style.backgroundColor = 'var(--hover-bg)';
+                        legendItem.style.transform = 'scale(1.02)';
+                        legendItem.style.fontWeight = 'bold';
+                        legendItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }
+            });
+
+            window.categoryPieChart.on('mouseout', function (params) {
+                if (params.componentType === 'series') {
+                    const uniqueName = params.name;
+                    const legendItem = document.querySelector(`.legend-item[data-unique-name="${uniqueName}"]`);
+                    if (legendItem) {
+                        legendItem.style.backgroundColor = 'transparent';
+                        legendItem.style.transform = 'none';
+                        legendItem.style.fontWeight = 'normal';
+                    }
+                }
+            });
         }
 
-        // 绑定筛选按钮事件 - 删除，由 TransactionFilterManager 处理
     });
+
+    // 渲染自定义图例函数
+    function renderCustomLegend(data, totalAmount) {
+        const container = document.getElementById('customLegend');
+        container.innerHTML = ''; // 清空
+
+        // 设置容器为Flex横向布局，实现左右分栏
+        container.style.display = 'flex';
+        container.style.flexDirection = 'row';
+        container.style.alignItems = 'flex-start'; // 顶部对齐
+        container.style.gap = '15px'; // 左右分栏间距
+
+        // 分组数据
+        const alipayData = data.filter(item => item['来源'] === '支付宝').sort((a, b) => b['金额'] - a['金额']);
+        const wechatData = data.filter(item => item['来源'] === '微信' || item['来源'] === 'wechat').sort((a, b) => b['金额'] - a['金额']);
+
+        const createSection = (title, items, isTwoCol, flexWeight) => {
+            if (items.length === 0) return null;
+
+            const section = document.createElement('div');
+            section.className = 'legend-section';
+            // 如果数据很少，也允许不占满 flex (可选)
+
+            const header = document.createElement('h4');
+            header.style.marginBottom = '10px';
+            header.style.color = 'var(--text-color)';
+            header.style.fontSize = '13px';
+            header.style.fontWeight = '600';
+            header.innerHTML = `<i class="fab fa-${title === '支付宝' ? 'alipay' : 'weixin'}" style="color: ${title === '支付宝' ? '#1677FF' : '#07C160'}; margin-right: 6px;"></i>${title} (${items.length})`;
+            section.appendChild(header);
+
+            const list = document.createElement('div');
+            list.style.display = 'grid';
+            // 支付宝两列，微信一列
+            list.style.gridTemplateColumns = isTwoCol ? '1fr 1fr' : '1fr';
+            list.style.gap = '6px 12px'; // 减小间距，减少空白
+
+            items.forEach(item => {
+                const percent = ((item['金额'] / totalAmount) * 100).toFixed(2);
+                const uniqueName = `${item['交易分类']}-${item['来源']}`;
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'legend-item';
+                itemDiv.setAttribute('data-unique-name', uniqueName); // 添加标识以便反向高亮
+                itemDiv.style.display = 'flex';
+                itemDiv.style.alignItems = 'center';
+                itemDiv.style.cursor = 'pointer';
+                itemDiv.style.fontSize = '14px'; // 字体变大
+                itemDiv.style.padding = '3px 4px';
+                itemDiv.style.borderRadius = '4px';
+                itemDiv.style.transition = 'all 0.2s'; // 增加过渡动画
+
+                itemDiv.onmouseover = () => {
+                    itemDiv.style.background = 'var(--hover-bg)';
+                    // 悬浮高亮饼图对应区块
+                    window.categoryPieChart.dispatchAction({
+                        type: 'highlight',
+                        name: uniqueName
+                    });
+                };
+                itemDiv.onmouseout = () => {
+                    itemDiv.style.background = 'transparent';
+                    // 移出取消高亮
+                    window.categoryPieChart.dispatchAction({
+                        type: 'downplay',
+                        name: uniqueName
+                    });
+                };
+
+                // 点击仍保留高亮逻辑，或者做筛选？目前主要是高亮演示
+                itemDiv.onclick = () => {
+                    window.categoryPieChart.dispatchAction({
+                        type: 'highlight',
+                        name: uniqueName
+                    });
+                };
+
+                // 颜色点
+                const dot = document.createElement('span');
+                dot.style.width = '8px';
+                dot.style.height = '8px';
+                dot.style.borderRadius = '50%';
+                dot.style.backgroundColor = window.getCategoryColor(item['交易分类']);
+                dot.style.marginRight = '8px'; // 稍微增加点和字的距离
+                dot.style.flexShrink = '0';
+
+                // 文本
+                const text = document.createElement('div');
+                text.style.flex = '1';
+                text.style.display = 'flex';
+                // 取消 space-between，改为左对齐
+                text.style.justifyContent = 'flex-start';
+                text.style.alignItems = 'baseline';
+                // 防止文字折行
+                text.style.whiteSpace = 'nowrap';
+                text.style.overflow = 'hidden';
+
+                // 分类名
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = item['交易分类'];
+                nameSpan.style.marginRight = '4px'; // 减少名字和比例的间距
+                nameSpan.style.fontWeight = '500';
+
+                const percentSpan = document.createElement('span');
+                percentSpan.textContent = `${percent}%`;
+                percentSpan.style.color = 'var(--secondary-text)';
+                percentSpan.style.fontSize = '0.9em'; // 比例字体稍微小一点点
+
+                text.appendChild(nameSpan);
+                text.appendChild(percentSpan);
+
+                itemDiv.appendChild(dot);
+                itemDiv.appendChild(text);
+                list.appendChild(itemDiv);
+            });
+            section.appendChild(list);
+            return section;
+        };
+
+        if (alipayData.length > 0) {
+            const el = createSection('支付宝', alipayData, true, '3'); // 支付宝给更多权重 (2 cols vs 1 col, 2:1 ratio? or 3:2?)
+            // set flex: 2 for 2 cols, flex: 1 for 1 col.
+            if (el) {
+                el.style.flex = '2';
+                container.appendChild(el);
+            }
+        }
+        if (wechatData.length > 0) {
+            const el = createSection('微信', wechatData, false, '1');
+            if (el) {
+                el.style.flex = '1';
+                container.appendChild(el);
+            }
+        }
+    }
 </script>
 {% endblock %}
+```

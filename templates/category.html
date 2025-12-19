@@ -865,7 +865,9 @@
                     category: currentCategory,
                     hour: hour.toString(),
                     range: currentTimeRange,
-                    year: currentYear.toString()
+                    year: currentYear.toString(),
+                    per_page: '1000',
+                    page: '1'
                 });
 
                 if (currentTimeRange === 'month') {
@@ -930,6 +932,9 @@
 
                 // 添加时间范围参数
                 queryParams.append('range', currentTimeRange);
+                // 增加分页限制以显示更多数据
+                queryParams.append('per_page', '1000');
+                queryParams.append('page', '1');
 
                 // 获取交易记录
                 fetch(`/api/transactions?${queryParams}`)
@@ -958,7 +963,9 @@
 
                 // 构建基础查询参数
                 queryParams = new URLSearchParams({
-                    category: currentCategory
+                    category: currentCategory,
+                    per_page: '1000',
+                    page: '1'
                 });
 
                 // 根据当前时间范围添加不同的参数
