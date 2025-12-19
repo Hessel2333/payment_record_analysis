@@ -50,8 +50,9 @@ python app.py
 ~~~
 payment_record_analysis/
 ├── app.py                 # Flask 应用主文件
-├── analyze_merchants.py   # 商家分析模块
 ├── requirements.txt       # 项目依赖
+├── scripts/              # 辅助 Python 脚本 (生成演示数据、调试等)
+├── backup/               # 代码及模板备份
 ├── templates/            # 模板文件目录
 │   ├── base.html        # 基础模板
 │   ├── index.html       # 首页
@@ -62,12 +63,12 @@ payment_record_analysis/
 │   ├── insights.html    # 消费洞察
 │   ├── transactions.html # 交易记录
 │   └── settings.html    # 设置页面
+├── static/               # 静态资源 (CSS, JS, 示例数据)
 ├── docs/                 # 文档目录
 │   ├── user_guide.md        # 系统的详细使用说明
 │   ├── faq.md               # 使用过程中的疑问解答
 │   ├── api_reference.md     # 开发者接口文档
-│   ├── deployment_guide.md  # 本地或服务器部署说明
-│   └── deployment_pythonanywhere.md # 针对 PythonAnywhere 平台的部署指南
+│   └── deployment_guide.md  # 本地或服务器部署说明
 └── README.md            # 项目说明文档
 ~~~
 
