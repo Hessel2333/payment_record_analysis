@@ -65,8 +65,9 @@ alipay*.csv
 *.txt
 !requirements.txt
 
-# 忽略所有sh文件
+# 忽略所有sh文件，但保留维护脚本
 *.sh
+!scripts/pa_maintenance.sh
 
 # 忽略特定的txt文件
 merchant_analysis.txt
