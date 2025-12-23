@@ -38,7 +38,7 @@ logging.basicConfig(
         logging.StreamHandler()  # 保留控制台输出
     ]
 )
-    logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # 添加静态文件版本号控制
 @app.context_processor
