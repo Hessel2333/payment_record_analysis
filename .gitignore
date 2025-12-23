@@ -44,6 +44,7 @@ csv_structure_analyzer.py
 
 # 测试数据
 *.csv
+!static/sample_data.csv
 test/
 
 # 支付宝账单文件
