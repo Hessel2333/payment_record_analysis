@@ -197,6 +197,7 @@ h4 {
     margin: -20px -20px 24px -20px;
     padding: 20px;
     border-bottom: 1px solid var(--border-color);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
     backdrop-filter: saturate(180%) blur(20px);
     background-color: rgba(245, 245, 247, 0.8);
 }
@@ -664,6 +665,7 @@ table {
     right: 0;
     bottom: 0;
     background: rgba(255, 255, 255, 0.9);
+    -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
     z-index: 9999;
     display: flex;
@@ -1501,6 +1503,7 @@ table {
     background-color: var(--bg-color);
     margin: -20px -20px 24px -20px;
     border-bottom: 1px solid var(--border-color);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
     backdrop-filter: saturate(180%) blur(20px);
     background-color: rgba(245, 245, 247, 0.8);
 }
@@ -1570,6 +1573,7 @@ table {
     pointer-events: none;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
     backdrop-filter: saturate(180%) blur(20px);
     background-color: rgba(245, 245, 247, 0.95);
     z-index: 100;
@@ -1721,6 +1725,7 @@ table {
     background-color: var(--bg-color);
     margin: -20px -20px 24px -20px;
     border-bottom: 1px solid var(--border-color);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
     backdrop-filter: saturate(180%) blur(20px);
     background-color: rgba(245, 245, 247, 0.8);
 }
@@ -2065,6 +2070,7 @@ table {
     left: 50%;
     transform: translateX(-50%);
     background: rgba(0, 0, 0, 0.8);
+    -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
     padding: 8px 14px;
     border-radius: 6px;
@@ -2243,8 +2249,10 @@ table {
     z-index: 9999;
     justify-content: center;
     align-items: center;
-    backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    -webkit--webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
     transition: all 0.3s ease;
 }
 
@@ -2534,6 +2542,7 @@ table {
     align-items: center;
     justify-content: center;
     margin: 0 auto 20px;
+    -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
 }
 
@@ -3220,8 +3229,10 @@ table {
     left: var(--sidebar-width);
     right: 0;
     background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    -webkit--webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
     border-top: 1px solid rgba(0, 0, 0, 0.1);
     padding: 16px 32px;
     z-index: 1000;

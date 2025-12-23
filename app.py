@@ -38,7 +38,23 @@ logging.basicConfig(
         logging.StreamHandler()  # 保留控制台输出
     ]
 )
-logger = logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
+
+# 添加静态文件版本号控制
+@app.context_processor
+def inject_static_version():
+    """注入静态文件版本号，用于清除缓存"""
+    try:
+        # 获取 style.css 的最后修改时间作为版本号
+        css_path = os.path.join(app.root_path, 'static', 'css', 'style.css')
+        if os.path.exists(css_path):
+            version = str(int(os.path.getmtime(css_path)))
+        else:
+            version = datetime.now().strftime('%Y%m%d%H%M')
+    except Exception:
+        version = datetime.now().strftime('%Y%m%d%H%M')
+    
+    return dict(STATIC_VERSION=version)
 
 # 添加文件上传配置
 UPLOAD_FOLDER = '/tmp/flask_uploads'  # PythonAnywhere 推荐的临时目录
